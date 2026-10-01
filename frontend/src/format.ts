@@ -41,3 +41,35 @@ export function todayIso(): string {
   const day = String(now.getDate()).padStart(2, '0')
   return `${now.getFullYear()}-${month}-${day}`
 }
+
+// Whole-dollar amounts for chart axes, e.g. "$1,900".
+export function formatAxisMoney(amount: number, currency: Currency): string {
+  return new Intl.NumberFormat('en-CA', {
+    style: 'currency',
+    currency,
+    maximumFractionDigits: 0,
+  }).format(amount)
+}
+
+// Short date for chart axes, e.g. "Jul 20".
+export function formatShortDate(isoDate: string): string {
+  const [year, month, day] = isoDate.split('-').map(Number)
+  return new Date(year, month - 1, day).toLocaleDateString('en-CA', {
+    month: 'short',
+    day: 'numeric',
+  })
+}
+
+// Signed money, e.g. "+$12.50" or "−$73.70" (with a real minus sign).
+export function formatSignedMoney(amount: string, currency: Currency): string {
+  const value = Number(amount)
+  const sign = value > 0 ? '+' : value < 0 ? '−' : ''
+  return sign + formatMoney(String(Math.abs(value)), currency)
+}
+
+// Signed percentage, e.g. "+2.50%" or "−3.74%".
+export function formatSignedPercent(percent: string): string {
+  const value = Number(percent)
+  const sign = value > 0 ? '+' : value < 0 ? '−' : ''
+  return `${sign}${Math.abs(value).toFixed(2)}%`
+}

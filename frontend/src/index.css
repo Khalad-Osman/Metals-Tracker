@@ -10,6 +10,15 @@
   --accent: #9a6700;
   --accent-hover: #7d5300;
   --error: #cf222e;
+
+  /* Charts (validated palette: blue for the value, gray for context) */
+  --chart-value: #2a78d6;
+  --chart-cost: #898781;
+  --chart-grid: #e1e0d9;
+  --chart-axis: #c3c2b7;
+  --chart-muted: #898781;
+  --gain-text: #006300;
+  --loss-text: #d03b3b;
 }
 
 body {
@@ -150,6 +159,8 @@ button.link.danger {
 
 .table-wrapper {
   overflow-x: auto;
+  /* Keeps absolutely positioned content (like hidden labels) inside the scroll box. */
+  position: relative;
 }
 
 table {
@@ -202,4 +213,155 @@ td.actions {
 .empty {
   color: var(--muted);
   margin: 0;
+}
+
+/* --- Portfolio --- */
+
+.portfolio {
+  transition: opacity 0.2s;
+}
+
+/* While reloading, keep the old numbers visible but faded (no layout jump). */
+.portfolio.refreshing {
+  opacity: 0.6;
+}
+
+.summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.stat p {
+  margin: 0;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.stat-value {
+  font-size: 1.6rem;
+  font-weight: 600;
+  line-height: 1.25;
+}
+
+.stat-value.hero {
+  font-size: 2.4rem;
+}
+
+.stat-note {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.stat-delta {
+  font-weight: 600;
+}
+
+.stat-delta.up {
+  color: var(--gain-text);
+}
+
+.stat-delta.down {
+  color: var(--loss-text);
+}
+
+/* --- Chart --- */
+
+.chart {
+  margin: 0;
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.chart-header figcaption {
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-title {
+  font-weight: 600;
+}
+
+.chart-subtitle,
+.chart-note {
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.chart-note {
+  margin: 0.75rem 0 0;
+}
+
+.chart-header button {
+  flex-shrink: 0;
+  font-size: 0.875rem;
+}
+
+.legend {
+  display: flex;
+  gap: 1.25rem;
+  list-style: none;
+  margin: 0 0 0.5rem;
+  padding: 0;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+/* Short line keys that match the lines they stand for. */
+.legend-key {
+  display: inline-block;
+  width: 16px;
+  height: 2px;
+  border-radius: 1px;
+  vertical-align: middle;
+  margin-right: 0.35rem;
+}
+
+.legend-key.value {
+  background: var(--chart-value);
+}
+
+.legend-key.cost {
+  background: var(--chart-cost);
+}
+
+.chart-area {
+  width: 100%;
+}
+
+.chart-tooltip {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.5rem 0.75rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  font-size: 0.85rem;
+}
+
+.chart-tooltip p {
+  margin: 0;
+}
+
+.tooltip-date {
+  color: var(--muted);
+  margin-bottom: 0.25rem !important;
+}
+
+.tooltip-row span:not(.legend-key) {
+  color: var(--muted);
+}
+
+.history-table {
+  max-height: 320px;
+  overflow-y: auto;
 }
