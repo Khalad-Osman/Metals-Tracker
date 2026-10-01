@@ -1,15 +1,22 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
 from app.database import get_session
 from app.models import Purchase
-from app.schemas import PurchaseCreate, PurchaseRead
+from app.schemas import PurchaseInput, PurchaseRead
 
 router = APIRouter(prefix="/purchases", tags=["purchases"])
 
 
+def get_purchase_or_404(purchase_id: int, session: Session) -> Purchase:
+    purchase = session.get(Purchase, purchase_id)
+    if purchase is None:
+        raise HTTPException(status_code=404, detail="Purchase not found")
+    return purchase
+
+
 @router.post("", response_model=PurchaseRead, status_code=201)
-def create_purchase(entry: PurchaseCreate, session: Session = Depends(get_session)):
+def create_purchase(entry: PurchaseInput, session: Session = Depends(get_session)):
     purchase = Purchase.from_entry(**entry.model_dump())
     session.add(purchase)
     session.commit()
@@ -24,3 +31,28 @@ def list_purchases(session: Session = Depends(get_session)):
         Purchase.purchase_date.desc(), Purchase.id.desc()
     )
     return session.exec(statement).all()
+
+
+@router.put("/{purchase_id}", response_model=PurchaseRead)
+def update_purchase(
+    purchase_id: int, entry: PurchaseInput, session: Session = Depends(get_session)
+):
+    """Replace a purchase's details with newly entered ones."""
+    purchase = get_purchase_or_404(purchase_id, session)
+
+    # Build the updated values the same way as a new purchase (so weight_oz is
+    # recalculated), then copy them onto the existing row, keeping its id.
+    updated = Purchase.from_entry(**entry.model_dump())
+    purchase.sqlmodel_update(updated.model_dump(exclude={"id"}))
+
+    session.add(purchase)
+    session.commit()
+    session.refresh(purchase)
+    return purchase
+
+
+@router.delete("/{purchase_id}", status_code=204)
+def delete_purchase(purchase_id: int, session: Session = Depends(get_session)):
+    purchase = get_purchase_or_404(purchase_id, session)
+    session.delete(purchase)
+    session.commit()

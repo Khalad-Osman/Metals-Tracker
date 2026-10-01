@@ -114,3 +114,75 @@ def test_rejects_missing_field(client: TestClient):
     del entry["metal"]
 
     assert_rejected(client, client.post("/purchases", json=entry), "metal")
+
+
+# --- Editing ---
+
+
+def test_update_purchase_replaces_details_and_recalculates_ounces(client: TestClient):
+    purchase_id = post_purchase(client).json()["id"]
+
+    response = client.put(
+        f"/purchases/{purchase_id}",
+        json={**VALID_PURCHASE, "metal": "silver", "weight": "1", "unit": "kg"},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["id"] == purchase_id
+    assert response.json()["metal"] == "silver"
+    assert response.json()["weight_oz"] == "32.15074657"
+    assert response.json()["original_weight"] == "1"
+    assert response.json()["original_unit"] == "kg"
+
+
+def test_update_is_saved(client: TestClient):
+    purchase_id = post_purchase(client).json()["id"]
+
+    client.put(f"/purchases/{purchase_id}", json={**VALID_PURCHASE, "price_paid": "999.99"})
+
+    [saved] = client.get("/purchases").json()
+    assert saved["price_paid"] == "999.99"
+
+
+def test_update_missing_purchase_returns_404(client: TestClient):
+    response = client.put("/purchases/999", json=VALID_PURCHASE)
+
+    assert response.status_code == 404
+
+
+def test_invalid_update_is_rejected_and_purchase_unchanged(client: TestClient):
+    purchase_id = post_purchase(client).json()["id"]
+
+    response = client.put(f"/purchases/{purchase_id}", json={**VALID_PURCHASE, "weight": "0"})
+
+    assert response.status_code == 422
+    [saved] = client.get("/purchases").json()
+    assert saved["original_weight"] == "100"
+
+
+# --- Deleting ---
+
+
+def test_delete_purchase_removes_only_that_purchase(client: TestClient):
+    first_id = post_purchase(client, metal="gold").json()["id"]
+    second_id = post_purchase(client, metal="silver").json()["id"]
+
+    response = client.delete(f"/purchases/{first_id}")
+
+    assert response.status_code == 204
+    assert [p["id"] for p in client.get("/purchases").json()] == [second_id]
+
+
+def test_delete_missing_purchase_returns_404(client: TestClient):
+    response = client.delete("/purchases/999")
+
+    assert response.status_code == 404
+
+
+def test_deleted_purchase_cannot_be_deleted_again(client: TestClient):
+    purchase_id = post_purchase(client).json()["id"]
+
+    client.delete(f"/purchases/{purchase_id}")
+    response = client.delete(f"/purchases/{purchase_id}")
+
+    assert response.status_code == 404

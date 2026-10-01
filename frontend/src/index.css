@@ -87,23 +87,56 @@ button {
   flex: 1;
 }
 
-button {
-  grid-column: 1 / -1;
-  justify-self: start;
-  background: var(--accent);
+.purchase-form.editing {
   border-color: var(--accent);
-  color: #ffffff;
-  font-weight: 600;
-  cursor: pointer;
+  box-shadow: 0 0 0 1px var(--accent);
 }
 
-button:hover:not(:disabled) {
-  background: var(--accent-hover);
+.form-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  gap: 0.5rem;
+}
+
+button {
+  font-weight: 600;
+  cursor: pointer;
 }
 
 button:disabled {
   opacity: 0.6;
   cursor: default;
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+}
+
+button.primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+button.secondary:hover:not(:disabled) {
+  background: #f3f4f6;
+}
+
+/* Text-style buttons used in the table rows */
+button.link {
+  border: none;
+  background: none;
+  padding: 0.15rem 0.35rem;
+  color: var(--accent);
+  font-size: 0.875rem;
+}
+
+button.link:hover {
+  text-decoration: underline;
+}
+
+button.link.danger {
+  color: var(--error);
 }
 
 .field-error,
@@ -146,6 +179,24 @@ tbody tr:last-child td {
 .number {
   text-align: right;
   font-variant-numeric: tabular-nums;
+}
+
+tr.editing td {
+  background: #fff8c5;
+}
+
+td.actions {
+  text-align: right;
+}
+
+/* Hidden on screen but still read by screen readers */
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 
 .empty {

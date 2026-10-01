@@ -8,8 +8,8 @@ from app.models import Currency, Metal
 from app.units import WeightUnit
 
 
-class PurchaseCreate(SQLModel):
-    """What the client sends to log a new purchase."""
+class PurchaseInput(SQLModel):
+    """What the client sends to create or edit a purchase."""
 
     metal: Metal
     weight: Decimal = Field(gt=0, max_digits=14, decimal_places=6)
