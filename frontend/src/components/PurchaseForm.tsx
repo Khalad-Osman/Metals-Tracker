@@ -1,14 +1,17 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { createPurchase, ValidationError } from '../api'
-import type { Currency, FieldErrors, Metal, NewPurchase, Purchase, WeightUnit } from '../api'
+import { createPurchase, updatePurchase, ValidationError } from '../api'
+import type { Currency, FieldErrors, Metal, Purchase, PurchaseInput, WeightUnit } from '../api'
 import { METAL_LABELS, UNIT_LABELS, todayIso } from '../format'
 
 type Props = {
-  onCreated: (purchase: Purchase) => void
+  // When set, the form edits this purchase instead of adding a new one.
+  editing?: Purchase
+  onSaved: () => void
+  onCancelEdit: () => void
 }
 
-function emptyForm(): NewPurchase {
+function emptyForm(): PurchaseInput {
   return {
     metal: 'gold',
     weight: '',
@@ -19,13 +22,27 @@ function emptyForm(): NewPurchase {
   }
 }
 
-export default function PurchaseForm({ onCreated }: Props) {
-  const [form, setForm] = useState<NewPurchase>(emptyForm)
+// Fill the form with what the user originally entered for this purchase.
+function formFromPurchase(purchase: Purchase): PurchaseInput {
+  return {
+    metal: purchase.metal,
+    weight: purchase.original_weight,
+    unit: purchase.original_unit,
+    purchase_date: purchase.purchase_date,
+    price_paid: purchase.price_paid,
+    currency: purchase.currency,
+  }
+}
+
+export default function PurchaseForm({ editing, onSaved, onCancelEdit }: Props) {
+  const [form, setForm] = useState<PurchaseInput>(() =>
+    editing ? formFromPurchase(editing) : emptyForm(),
+  )
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [error, setError] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
 
-  function update<K extends keyof NewPurchase>(field: K, value: NewPurchase[K]) {
+  function update<K extends keyof PurchaseInput>(field: K, value: PurchaseInput[K]) {
     setForm({ ...form, [field]: value })
   }
 
@@ -36,10 +53,14 @@ export default function PurchaseForm({ onCreated }: Props) {
     setFieldErrors({})
 
     try {
-      const purchase = await createPurchase(form)
-      onCreated(purchase)
-      // Keep the metal, unit and currency choices; clear the rest for the next entry.
-      setForm({ ...emptyForm(), metal: form.metal, unit: form.unit, currency: form.currency })
+      if (editing) {
+        await updatePurchase(editing.id, form)
+      } else {
+        await createPurchase(form)
+        // Keep the metal, unit and currency choices; clear the rest for the next entry.
+        setForm({ ...emptyForm(), metal: form.metal, unit: form.unit, currency: form.currency })
+      }
+      onSaved()
     } catch (err) {
       if (err instanceof ValidationError) {
         setFieldErrors(err.fieldErrors)
@@ -52,8 +73,12 @@ export default function PurchaseForm({ onCreated }: Props) {
   }
 
   return (
-    <form className="purchase-form" onSubmit={handleSubmit} noValidate>
-      <h2>Add a purchase</h2>
+    <form
+      className={editing ? 'purchase-form editing' : 'purchase-form'}
+      onSubmit={handleSubmit}
+      noValidate
+    >
+      <h2>{editing ? 'Edit purchase' : 'Add a purchase'}</h2>
 
       <div className="field">
         <label htmlFor="metal">Metal</label>
@@ -138,9 +163,16 @@ export default function PurchaseForm({ onCreated }: Props) {
 
       {error && <p className="form-error">{error}</p>}
 
-      <button type="submit" disabled={saving}>
-        {saving ? 'Saving…' : 'Add purchase'}
-      </button>
+      <div className="form-actions">
+        <button type="submit" className="primary" disabled={saving}>
+          {saving ? 'Saving…' : editing ? 'Save changes' : 'Add purchase'}
+        </button>
+        {editing && (
+          <button type="button" className="secondary" onClick={onCancelEdit} disabled={saving}>
+            Cancel
+          </button>
+        )}
+      </div>
     </form>
   )
 }

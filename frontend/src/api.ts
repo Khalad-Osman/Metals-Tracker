@@ -18,7 +18,7 @@ export type Purchase = {
   currency: Currency
 }
 
-export type NewPurchase = {
+export type PurchaseInput = {
   metal: Metal
   weight: string
   unit: WeightUnit
@@ -28,7 +28,7 @@ export type NewPurchase = {
 }
 
 // Field name -> message, e.g. { weight: "Input should be greater than 0" }
-export type FieldErrors = Partial<Record<keyof NewPurchase, string>>
+export type FieldErrors = Partial<Record<keyof PurchaseInput, string>>
 
 export class ValidationError extends Error {
   fieldErrors: FieldErrors
@@ -49,26 +49,44 @@ export async function listPurchases(): Promise<Purchase[]> {
   return response.json()
 }
 
-export async function createPurchase(purchase: NewPurchase): Promise<Purchase> {
+export async function createPurchase(purchase: PurchaseInput): Promise<Purchase> {
   const response = await fetch(`${API_URL}/purchases`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(purchase),
   })
+  await throwIfFailed(response, 'Could not save purchase')
+  return response.json()
+}
 
+export async function updatePurchase(id: number, purchase: PurchaseInput): Promise<Purchase> {
+  const response = await fetch(`${API_URL}/purchases/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(purchase),
+  })
+  await throwIfFailed(response, 'Could not save changes')
+  return response.json()
+}
+
+export async function deletePurchase(id: number): Promise<void> {
+  const response = await fetch(`${API_URL}/purchases/${id}`, { method: 'DELETE' })
+  await throwIfFailed(response, 'Could not delete purchase')
+}
+
+async function throwIfFailed(response: Response, message: string): Promise<void> {
   // 422 means the backend rejected some fields; collect a message for each one.
   if (response.status === 422) {
     const body: { detail: FastApiError[] } = await response.json()
     const fieldErrors: FieldErrors = {}
     for (const error of body.detail) {
-      const field = error.loc[error.loc.length - 1] as keyof NewPurchase
+      const field = error.loc[error.loc.length - 1] as keyof PurchaseInput
       fieldErrors[field] = error.msg.replace(/^Value error, /, '')
     }
     throw new ValidationError(fieldErrors)
   }
 
   if (!response.ok) {
-    throw new Error(`Could not save purchase (error ${response.status})`)
+    throw new Error(`${message} (error ${response.status})`)
   }
-  return response.json()
 }
