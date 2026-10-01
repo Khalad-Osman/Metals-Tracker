@@ -5,6 +5,7 @@ description = "FastAPI backend for the Metals Investment Tracker"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "alembic>=1.20.0",
     "fastapi>=0.142.2",
     "sqlmodel>=0.0.47",
     "uvicorn[standard]>=0.54.0",
