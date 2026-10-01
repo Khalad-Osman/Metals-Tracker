@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { deletePurchase, getPortfolioHistory, listPurchases } from './api'
-import type { Currency, PortfolioDay, Purchase } from './api'
+import { deletePurchase, getHoldings, getPortfolioHistory, listPurchases } from './api'
+import type { Currency, Holding, PortfolioDay, Purchase } from './api'
 import { METAL_LABELS, UNIT_LABELS, formatDate } from './format'
 import CurrencyToggle from './components/CurrencyToggle'
+import HoldingsTable from './components/HoldingsTable'
 import PortfolioChart from './components/PortfolioChart'
 import PortfolioSummary from './components/PortfolioSummary'
 import PurchaseForm from './components/PurchaseForm'
@@ -30,6 +31,7 @@ function App() {
   const [currency, setCurrency] = useState<Currency>(savedCurrency)
   const [portfolioCurrency, setPortfolioCurrency] = useState<Currency>(currency)
   const [portfolio, setPortfolio] = useState<PortfolioDay[]>([])
+  const [holdings, setHoldings] = useState<Holding[]>([])
   const [portfolioError, setPortfolioError] = useState<string | null>(null)
   // True while the portfolio is reloading; the old chart stays visible but faded.
   const [portfolioRefreshing, setPortfolioRefreshing] = useState(true)
@@ -54,10 +56,12 @@ function App() {
     // If another load starts before this one finishes, ignore this one's result,
     // so a slow, outdated response can't overwrite a newer one.
     let outdated = false
-    getPortfolioHistory(currency)
-      .then((data) => {
+    // Loaded together so the chart and the holdings always show the same currency.
+    Promise.all([getPortfolioHistory(currency), getHoldings(currency)])
+      .then(([history, byMetal]) => {
         if (outdated) return
-        setPortfolio(data)
+        setPortfolio(history)
+        setHoldings(byMetal)
         setPortfolioCurrency(currency)
         setPortfolioError(null)
       })
@@ -135,6 +139,7 @@ function App() {
           <>
             <PortfolioSummary history={portfolio} currency={portfolioCurrency} />
             <PortfolioChart history={portfolio} currency={portfolioCurrency} />
+            <HoldingsTable holdings={holdings} currency={portfolioCurrency} />
             <p className="chart-note">
               Values use the spot price. Dealers charge a premium above spot, so a new
               purchase usually starts out below what you paid.

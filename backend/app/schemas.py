@@ -71,3 +71,19 @@ class PortfolioDayRead(SQLModel):
     cost: Decimal | None
     gain: Decimal | None
     gain_percent: Decimal | None
+
+
+class HoldingRead(SQLModel):
+    """One metal's position on a day, in the requested currency.
+
+    Amounts are None when there's no recent enough price or exchange rate.
+    share_percent is this metal's part of the whole portfolio's value.
+    """
+
+    metal: Metal
+    weight_oz: Decimal
+    value: Decimal | None
+    cost: Decimal | None
+    gain: Decimal | None
+    gain_percent: Decimal | None
+    share_percent: Decimal | None
