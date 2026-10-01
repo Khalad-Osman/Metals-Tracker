@@ -2,7 +2,14 @@
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.5;
   color: #1f2328;
-  background-color: #ffffff;
+  background-color: #f6f8fa;
+
+  --surface: #ffffff;
+  --border: #d0d7de;
+  --muted: #59636e;
+  --accent: #9a6700;
+  --accent-hover: #7d5300;
+  --error: #cf222e;
 }
 
 body {
@@ -15,10 +22,133 @@ main {
   padding: 2rem 1rem;
 }
 
-.status-ok {
-  color: #1a7f37;
+h1 {
+  margin: 0 0 1.5rem;
 }
 
-.status-unreachable {
-  color: #cf222e;
+h2 {
+  font-size: 1.15rem;
+  margin: 0 0 1rem;
+}
+
+section,
+.purchase-form {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+/* --- Form --- */
+
+.purchase-form {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  align-items: start;
+}
+
+.purchase-form h2,
+.purchase-form .form-error {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+label {
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+input,
+select,
+button {
+  font: inherit;
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--surface);
+  color: inherit;
+  min-width: 0;
+}
+
+.input-group {
+  display: flex;
+  gap: 0.4rem;
+}
+
+.input-group input {
+  flex: 1;
+}
+
+button {
+  grid-column: 1 / -1;
+  justify-self: start;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #ffffff;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.field-error,
+.form-error {
+  color: var(--error);
+  font-size: 0.875rem;
+  margin: 0;
+}
+
+/* --- Table --- */
+
+.table-wrapper {
+  overflow-x: auto;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+th,
+td {
+  text-align: left;
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+th {
+  font-size: 0.8rem;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.number {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.empty {
+  color: var(--muted);
+  margin: 0;
 }
