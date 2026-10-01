@@ -108,3 +108,22 @@ export async function getPortfolioHistory(currency: Currency): Promise<Portfolio
   }
   return response.json()
 }
+
+// One metal's position today. Amounts are exact strings, or null when unknown.
+export type Holding = {
+  metal: Metal
+  weight_oz: string
+  value: string | null
+  cost: string | null
+  gain: string | null
+  gain_percent: string | null
+  share_percent: string | null
+}
+
+export async function getHoldings(currency: Currency): Promise<Holding[]> {
+  const response = await fetch(`${API_URL}/portfolio/holdings?currency=${currency}`)
+  if (!response.ok) {
+    throw new Error(`Could not load holdings (error ${response.status})`)
+  }
+  return response.json()
+}
