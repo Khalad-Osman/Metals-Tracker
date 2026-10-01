@@ -14,10 +14,13 @@ from sqlmodel import Session
 from app.config import METALS_API_KEY
 from app.database import engine
 from app.price_fetcher import (
+    FREE_PLAN_HISTORY_DAYS,
     PriceFetchError,
     check_usage,
+    earliest_free_plan_date,
     make_client,
     missing_range,
+    requests_needed,
     update_prices,
 )
 
@@ -50,7 +53,22 @@ def main() -> int:
                         return 0
                     start, end = needed
 
-                print(f"Downloading prices from {start} to {end}...")
+                earliest = earliest_free_plan_date(today)
+                if start < earliest:
+                    print(
+                        f"Note: the free plan only covers the last {FREE_PLAN_HISTORY_DAYS} days, "
+                        f"so prices from {start} to {earliest - datetime.timedelta(days=1)} "
+                        "are skipped. Older prices need to be imported separately."
+                    )
+                    start = earliest
+                if start > end:
+                    print("Nothing to download within the free plan's range.")
+                    return 0
+
+                print(
+                    f"Downloading prices from {start} to {end} "
+                    f"({requests_needed(start, end)} requests)..."
+                )
                 saved = update_prices(session, client, start, end)
                 print(f"Saved {saved} prices.")
                 return 0

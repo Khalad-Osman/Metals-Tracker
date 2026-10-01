@@ -1,11 +1,16 @@
 """Download daily spot prices from metalpriceapi.com and store them.
 
-The free plan allows 100 requests a month, and one /timeframe request covers up
-to 365 days, so we ask for whole date ranges at once and only for missing days.
+Free plan limits (found by testing; the docs don't mention most of them):
+- 100 requests a month
+- each /timeframe request covers one metal and at most 5 days
+- prices only go back 30 days
+So fetching costs 4 requests (one per metal) per 5 days. We only fetch days we
+don't have yet.
 """
 
 import datetime
 import json
+import math
 from decimal import Decimal
 
 import httpx2
@@ -15,7 +20,9 @@ from app.models import Metal, MetalPrice, Purchase
 from app.prices import save_metal_price
 
 API_URL = "https://api.metalpriceapi.com/v1"
-MAX_DAYS_PER_REQUEST = 365
+# Free plan: at most 5 days per /timeframe request, and only the last 30 days.
+MAX_DAYS_PER_REQUEST = 5
+FREE_PLAN_HISTORY_DAYS = 30
 PRICE_PRECISION = Decimal("0.0001")
 
 # The API's symbol for each metal.
@@ -54,10 +61,11 @@ def get_json(client: httpx2.Client, path: str, params: dict | None = None) -> di
         ) from error
 
     if not data.get("success"):
+        # The docs describe {"code", "info"}, but the API also sends {"statusCode", "message"}.
         error = data.get("error", {})
-        raise PriceFetchError(
-            f"metalpriceapi.com error {error.get('code')}: {error.get('info')}"
-        )
+        code = error.get("code") or error.get("statusCode")
+        message = error.get("info") or error.get("message")
+        raise PriceFetchError(f"metalpriceapi.com error {code}: {message}")
     return data
 
 
@@ -94,11 +102,12 @@ def parse_timeframe(data: dict) -> list[tuple[Metal, datetime.date, Decimal]]:
 
 
 def fetch_prices(
-    client: httpx2.Client, start: datetime.date, end: datetime.date
+    client: httpx2.Client, metal: Metal, start: datetime.date, end: datetime.date
 ) -> list[tuple[Metal, datetime.date, Decimal]]:
-    """Download prices for every metal from start to end (inclusive).
+    """Download one metal's prices from start to end (inclusive).
 
-    Ranges longer than 365 days are split into several requests.
+    The free plan allows only one metal per /timeframe request, and each request
+    covers at most 5 days, so longer ranges are split into several requests.
     """
     rows = []
     chunk_start = start
@@ -111,7 +120,7 @@ def fetch_prices(
                 "start_date": chunk_start.isoformat(),
                 "end_date": chunk_end.isoformat(),
                 "base": "USD",
-                "currencies": ",".join(SYMBOLS.values()),
+                "currencies": SYMBOLS[metal],
             },
         )
         rows.extend(parse_timeframe(data))
@@ -119,17 +128,37 @@ def fetch_prices(
     return rows
 
 
+def requests_needed(start: datetime.date, end: datetime.date) -> int:
+    """How many API requests fetching start..end will use (one per metal per 5 days)."""
+    days = (end - start).days + 1
+    return len(SYMBOLS) * math.ceil(days / MAX_DAYS_PER_REQUEST)
+
+
+def earliest_free_plan_date(today: datetime.date) -> datetime.date:
+    """The oldest date the free plan will return prices for.
+
+    The API rejects anything "older than 30 days". We stay one day inside that,
+    in case the API's "today" (UTC) is already a day ahead of ours.
+    """
+    return today - datetime.timedelta(days=FREE_PLAN_HISTORY_DAYS - 1)
+
+
 def missing_range(
     session: Session, today: datetime.date
 ) -> tuple[datetime.date, datetime.date] | None:
     """The dates we still need prices for, or None if we're up to date.
 
-    Starts the day after the latest stored price. With no prices stored yet,
-    starts at the earliest purchase (or 30 days ago if there are no purchases).
+    Starts the day after the latest price that every metal has (so a metal that
+    failed to download last time gets filled in). With no prices stored yet,
+    starts at the earliest purchase, or 30 days ago if there are no purchases.
     """
-    latest_price = session.exec(select(func.max(MetalPrice.date))).one()
-    if latest_price is not None:
-        start = latest_price + datetime.timedelta(days=1)
+    latest_per_metal = [
+        session.exec(select(func.max(MetalPrice.date)).where(MetalPrice.metal == metal)).one()
+        for metal in Metal
+    ]
+
+    if None not in latest_per_metal:
+        start = min(latest_per_metal) + datetime.timedelta(days=1)
     else:
         first_purchase = session.exec(select(func.min(Purchase.purchase_date))).one()
         start = first_purchase or today - datetime.timedelta(days=30)
@@ -145,8 +174,14 @@ def update_prices(
     start: datetime.date,
     end: datetime.date,
 ) -> int:
-    """Download and store prices for start..end. Returns how many prices were saved."""
-    rows = fetch_prices(client, start, end)
-    for metal, date, price in rows:
-        save_metal_price(session, metal, date, price)
-    return len(rows)
+    """Download and store all metals' prices for start..end.
+
+    Each metal is saved as soon as it downloads, so if a later request fails,
+    the requests already made aren't wasted. Returns how many prices were saved.
+    """
+    saved = 0
+    for metal in SYMBOLS:
+        for row_metal, date, price in fetch_prices(client, metal, start, end):
+            save_metal_price(session, row_metal, date, price)
+            saved += 1
+    return saved

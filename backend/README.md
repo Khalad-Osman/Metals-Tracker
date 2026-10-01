@@ -22,7 +22,10 @@ uv run python -m app.fetch_prices             # download any missing days up to 
 uv run python -m app.fetch_prices --start 2026-01-01 --end 2026-03-31
 ```
 
-Each run uses one request per 365 days fetched (the free plan allows 100 per month).
+The free plan allows 100 requests a month, only reaches back 30 days, and each request
+covers one metal and at most 5 days. So each run costs 4 requests per 5 days fetched:
+running it about once every 5 days uses ~24 requests a month. Don't run it daily
+(~120 a month).
 
 ## Changing the database (Alembic migrations)
 
