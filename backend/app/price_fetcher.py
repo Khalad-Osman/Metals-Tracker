@@ -114,7 +114,7 @@ def missing_range(
 
     Starts at the latest day that every metal has a price for. That day is
     fetched again because its price may have been fetched before the day ended.
-    With no prices stored yet, starts at the earliest purchase, or 30 days ago
+    With no prices stored yet, starts at the earliest purchase, or covers the last 30 days
     if there are no purchases.
     """
     latest_per_metal = [
@@ -126,7 +126,8 @@ def missing_range(
         start = min(latest_per_metal)
     else:
         first_purchase = session.exec(select(func.min(Purchase.purchase_date))).one()
-        start = first_purchase or today - datetime.timedelta(days=30)
+        # 30 days including today (one metals.dev request, not two).
+        start = first_purchase or today - datetime.timedelta(days=29)
 
     if start > today:
         return None

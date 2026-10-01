@@ -71,14 +71,15 @@ def missing_range(
     """The dates we still need rates for, or None if we're up to date.
 
     Starts at the latest stored rate (fetched again in case it changed). With no
-    rates stored yet, starts at the earliest purchase, or 30 days ago.
+    rates stored yet, starts at the earliest purchase, or covers the last 30 days.
     """
     latest = session.exec(select(func.max(ExchangeRate.date))).one()
     if latest is not None:
         start = latest
     else:
         first_purchase = session.exec(select(func.min(Purchase.purchase_date))).one()
-        start = first_purchase or today - datetime.timedelta(days=30)
+        # 30 days including today, matching the spot price fetcher.
+        start = first_purchase or today - datetime.timedelta(days=29)
 
     if start > today:
         return None

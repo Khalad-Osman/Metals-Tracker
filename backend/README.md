@@ -11,6 +11,18 @@ uv run pytest                             # run the tests
 
 Interactive API docs: http://localhost:8000/docs
 
+## Updating market data
+
+One command brings exchange rates and spot prices up to date:
+
+```powershell
+uv run python -m app.update_data
+```
+
+Run it whenever you like (once or twice a month is plenty); each run uses about 1 of
+the metals.dev free plan's 100 monthly requests. If one source fails, the other is
+still updated. The commands below fetch a single source or a specific date range.
+
 ## Spot prices
 
 Daily prices come from metals.dev. Copy `.env.example` to `.env` and add your
