@@ -1,0 +1,19 @@
+[project]
+name = "metals-tracker-backend"
+version = "0.1.0"
+description = "FastAPI backend for the Metals Investment Tracker"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.142.2",
+    "uvicorn[standard]>=0.54.0",
+]
+
+[dependency-groups]
+dev = [
+    "httpx2>=2.13.1",
+    "pytest>=9.1.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
