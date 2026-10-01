@@ -74,6 +74,7 @@ export default function PurchaseForm({ editing, onSaved, onCancelEdit }: Props) 
 
   return (
     <form
+      id="purchase-form"
       className={editing ? 'purchase-form editing' : 'purchase-form'}
       onSubmit={handleSubmit}
       noValidate

@@ -90,3 +90,21 @@ async function throwIfFailed(response: Response, message: string): Promise<void>
     throw new Error(`${message} (error ${response.status})`)
   }
 }
+
+// One day of portfolio history. Amounts are exact strings, or null when the
+// backend had no recent enough price or exchange rate to work them out.
+export type PortfolioDay = {
+  date: string
+  value: string | null
+  cost: string | null
+  gain: string | null
+  gain_percent: string | null
+}
+
+export async function getPortfolioHistory(currency: Currency): Promise<PortfolioDay[]> {
+  const response = await fetch(`${API_URL}/portfolio/history?currency=${currency}`)
+  if (!response.ok) {
+    throw new Error(`Could not load portfolio (error ${response.status})`)
+  }
+  return response.json()
+}
