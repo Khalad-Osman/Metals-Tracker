@@ -11,6 +11,19 @@ uv run pytest                             # run the tests
 
 Interactive API docs: http://localhost:8000/docs
 
+## Spot prices
+
+Daily prices come from metalpriceapi.com. Copy `.env.example` to `.env` and add your
+`METALS_API_KEY`, then:
+
+```powershell
+uv run python -m app.fetch_prices --check     # test the API key (uses no quota)
+uv run python -m app.fetch_prices             # download any missing days up to today
+uv run python -m app.fetch_prices --start 2026-01-01 --end 2026-03-31
+```
+
+Each run uses one request per 365 days fetched (the free plan allows 100 per month).
+
 ## Changing the database (Alembic migrations)
 
 After changing a model in `app/models.py`:
