@@ -50,3 +50,10 @@ class MetalPriceRead(SQLModel):
     metal: Metal
     date: datetime.date
     spot_price_usd: Decimal
+
+
+class ExchangeRateRead(SQLModel):
+    """How many Canadian dollars one US dollar bought on a day."""
+
+    date: datetime.date
+    usd_to_cad: Decimal

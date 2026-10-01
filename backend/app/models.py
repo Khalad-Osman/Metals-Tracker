@@ -64,3 +64,12 @@ class MetalPrice(SQLModel, table=True):
     metal: Metal
     date: datetime.date
     spot_price_usd: Decimal = Field(max_digits=12, decimal_places=4)
+
+
+class ExchangeRate(SQLModel, table=True):
+    """How many Canadian dollars one US dollar bought on a day (Bank of Canada)."""
+
+    id: int | None = Field(default=None, primary_key=True)
+    # Only one rate per day.
+    date: datetime.date = Field(unique=True)
+    usd_to_cad: Decimal = Field(max_digits=10, decimal_places=6)

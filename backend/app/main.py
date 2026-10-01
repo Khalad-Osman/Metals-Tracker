@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.routers import prices, purchases
+from app.routers import exchange_rates, prices, purchases
 
 app = FastAPI(title="Metals Tracker API")
 
@@ -22,3 +22,4 @@ def health_check() -> dict[str, str]:
 
 app.include_router(purchases.router)
 app.include_router(prices.router)
+app.include_router(exchange_rates.router)
