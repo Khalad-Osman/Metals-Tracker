@@ -231,7 +231,8 @@ def test_missing_range_starts_at_first_purchase_when_no_prices(session: Session)
 
 
 def test_missing_range_defaults_to_last_30_days(session: Session):
-    assert missing_range(session, TODAY) == (datetime.date(2026, 9, 1), TODAY)
+    # Sept 2 to Oct 1 is 30 days including today.
+    assert missing_range(session, TODAY) == (datetime.date(2026, 9, 2), TODAY)
 
 
 def test_missing_range_is_none_when_prices_are_ahead_of_today(session: Session):
