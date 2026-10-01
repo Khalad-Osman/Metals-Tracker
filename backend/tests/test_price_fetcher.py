@@ -10,10 +10,12 @@ from app.price_fetcher import (
     API_URL,
     PriceFetchError,
     check_usage,
+    earliest_free_plan_date,
     fetch_prices,
     make_client,
     missing_range,
     parse_timeframe,
+    requests_needed,
     update_prices,
     usd_per_ounce,
 )
@@ -28,19 +30,24 @@ def fake_client(handler) -> httpx2.Client:
     return httpx2.Client(base_url=API_URL, transport=httpx2.MockTransport(handler))
 
 
+# USD per ounce returned by the fake API for each symbol.
+FAKE_PRICES = {"XAU": 2650.0, "XAG": 31.25, "XPT": 1010.0, "XPD": 995.5}
+
+
 def timeframe_response(request: httpx2.Request) -> httpx2.Response:
-    """Answer /timeframe with one fixed gold and silver price per requested day."""
+    """Answer /timeframe like the free plan: one metal, a fixed price for every day."""
+    symbol = request.url.params["currencies"]
+    if "," in symbol:
+        error = {"statusCode": 412, "message": "Timeframe queries with multiple currencies require a paid plan."}
+        return httpx2.Response(200, json={"success": False, "error": error})
+
     start = datetime.date.fromisoformat(request.url.params["start_date"])
     end = datetime.date.fromisoformat(request.url.params["end_date"])
+    price = FAKE_PRICES[symbol]
     rates = {}
     day = start
     while day <= end:
-        rates[day.isoformat()] = {
-            "XAU": 0.00037736,
-            "USDXAU": 2650.0,
-            "XAG": 0.032,
-            "USDXAG": 31.25,
-        }
+        rates[day.isoformat()] = {symbol: 1 / price, f"USD{symbol}": price}
         day += datetime.timedelta(days=1)
     return httpx2.Response(200, json={"success": True, "base": "USD", "rates": rates})
 
@@ -106,32 +113,45 @@ def test_make_client_sends_key_in_header_not_url():
     assert "secret-key" not in str(client.base_url)
 
 
-def test_fetch_prices_asks_for_all_four_metals_in_usd():
+def test_fetch_prices_asks_for_one_metal_in_usd():
     requests = []
 
     def handler(request):
         requests.append(request)
         return timeframe_response(request)
 
-    fetch_prices(fake_client(handler), datetime.date(2026, 9, 1), datetime.date(2026, 9, 3))
+    rows = fetch_prices(
+        fake_client(handler), Metal.SILVER, datetime.date(2026, 9, 1), datetime.date(2026, 9, 3)
+    )
 
-    params = requests[0].url.params
+    assert len(requests) == 1
     assert requests[0].url.path == "/v1/timeframe"
-    assert params["base"] == "USD"
-    assert params["currencies"] == "XAU,XAG,XPT,XPD"
+    assert requests[0].url.params["currencies"] == "XAG"
+    assert requests[0].url.params["base"] == "USD"
+    assert [(metal, date.day) for metal, date, _ in rows] == [
+        (Metal.SILVER, 1),
+        (Metal.SILVER, 2),
+        (Metal.SILVER, 3),
+    ]
 
 
-def test_fetch_prices_splits_ranges_longer_than_365_days():
+def test_fetch_prices_splits_ranges_longer_than_5_days():
     requested = []
 
     def handler(request):
         requested.append((request.url.params["start_date"], request.url.params["end_date"]))
         return timeframe_response(request)
 
-    rows = fetch_prices(fake_client(handler), datetime.date(2025, 1, 1), datetime.date(2026, 1, 10))
+    rows = fetch_prices(
+        fake_client(handler), Metal.GOLD, datetime.date(2026, 9, 1), datetime.date(2026, 9, 12)
+    )
 
-    assert requested == [("2025-01-01", "2025-12-31"), ("2026-01-01", "2026-01-10")]
-    assert len(rows) == (365 + 10) * 2  # gold and silver for every day
+    assert requested == [
+        ("2026-09-01", "2026-09-05"),
+        ("2026-09-06", "2026-09-10"),
+        ("2026-09-11", "2026-09-12"),
+    ]
+    assert len(rows) == 12
 
 
 def test_api_error_is_raised_with_its_message():
@@ -141,6 +161,16 @@ def test_api_error_is_raised_with_its_message():
         )
 
     with pytest.raises(PriceFetchError, match="102: Invalid API Key"):
+        check_usage(fake_client(handler))
+
+
+def test_api_error_in_undocumented_format_is_raised_with_its_message():
+    # The real API sometimes sends statusCode/message instead of code/info.
+    def handler(request):
+        error = {"statusCode": 412, "message": "Upgrade your plan."}
+        return httpx2.Response(200, json={"success": False, "error": error})
+
+    with pytest.raises(PriceFetchError, match="412: Upgrade your plan."):
         check_usage(fake_client(handler))
 
 
@@ -171,8 +201,34 @@ def test_check_usage_returns_plan_details():
 # --- Working out which days are missing ---
 
 
+def save_all_metals(session: Session, date: datetime.date):
+    for metal in Metal:
+        save_metal_price(session, metal, date, Decimal("100"))
+
+
+def test_requests_needed_is_four_per_five_days():
+    sept_1 = datetime.date(2026, 9, 1)
+
+    assert requests_needed(sept_1, sept_1) == 4  # 1 day
+    assert requests_needed(sept_1, datetime.date(2026, 9, 5)) == 4  # 5 days
+    assert requests_needed(sept_1, datetime.date(2026, 9, 6)) == 8  # 6 days
+    assert requests_needed(datetime.date(2026, 9, 2), datetime.date(2026, 10, 1)) == 24  # 30 days
+
+
+def test_earliest_free_plan_date_is_29_days_back():
+    assert earliest_free_plan_date(TODAY) == datetime.date(2026, 9, 2)
+
+
 def test_missing_range_starts_after_latest_stored_price(session: Session):
-    save_metal_price(session, Metal.GOLD, datetime.date(2026, 9, 20), Decimal("2650"))
+    save_all_metals(session, datetime.date(2026, 9, 20))
+
+    assert missing_range(session, TODAY) == (datetime.date(2026, 9, 21), TODAY)
+
+
+def test_missing_range_catches_up_a_metal_that_is_behind(session: Session):
+    save_all_metals(session, datetime.date(2026, 9, 20))
+    for metal in [Metal.GOLD, Metal.SILVER, Metal.PLATINUM]:  # palladium stays behind
+        save_metal_price(session, metal, datetime.date(2026, 9, 25), Decimal("100"))
 
     assert missing_range(session, TODAY) == (datetime.date(2026, 9, 21), TODAY)
 
@@ -198,7 +254,7 @@ def test_missing_range_defaults_to_last_30_days(session: Session):
 
 
 def test_missing_range_is_none_when_up_to_date(session: Session):
-    save_metal_price(session, Metal.GOLD, TODAY, Decimal("2650"))
+    save_all_metals(session, TODAY)
 
     assert missing_range(session, TODAY) is None
 
@@ -212,9 +268,14 @@ def test_update_prices_stores_every_price(session: Session):
     saved = update_prices(session, client, datetime.date(2026, 9, 1), datetime.date(2026, 9, 3))
 
     prices = session.exec(select(MetalPrice)).all()
-    assert saved == 6
-    assert len(prices) == 6
-    assert {p.spot_price_usd for p in prices} == {Decimal("2650.0000"), Decimal("31.2500")}
+    assert saved == 12  # 4 metals x 3 days
+    assert len(prices) == 12
+    assert {p.spot_price_usd for p in prices} == {
+        Decimal("2650.0000"),
+        Decimal("31.2500"),
+        Decimal("1010.0000"),
+        Decimal("995.5000"),
+    }
 
 
 def test_fetching_the_same_days_twice_does_not_duplicate(session: Session):
@@ -224,4 +285,20 @@ def test_fetching_the_same_days_twice_does_not_duplicate(session: Session):
     update_prices(session, client, start, end)
     update_prices(session, client, start, end)
 
-    assert len(session.exec(select(MetalPrice)).all()) == 6
+    assert len(session.exec(select(MetalPrice)).all()) == 12
+
+
+def test_metals_downloaded_before_a_failure_are_kept(session: Session):
+    def handler(request):
+        if request.url.params["currencies"] == "XPT":
+            error = {"statusCode": 500, "message": "Server error"}
+            return httpx2.Response(200, json={"success": False, "error": error})
+        return timeframe_response(request)
+
+    with pytest.raises(PriceFetchError):
+        update_prices(
+            session, fake_client(handler), datetime.date(2026, 9, 1), datetime.date(2026, 9, 3)
+        )
+
+    saved_metals = {p.metal for p in session.exec(select(MetalPrice)).all()}
+    assert saved_metals == {Metal.GOLD, Metal.SILVER}
