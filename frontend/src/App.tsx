@@ -2,13 +2,22 @@ import { useEffect, useState } from 'react'
 import { deletePurchase, getPortfolioHistory, listPurchases } from './api'
 import type { Currency, PortfolioDay, Purchase } from './api'
 import { METAL_LABELS, UNIT_LABELS, formatDate } from './format'
+import CurrencyToggle from './components/CurrencyToggle'
 import PortfolioChart from './components/PortfolioChart'
 import PortfolioSummary from './components/PortfolioSummary'
 import PurchaseForm from './components/PurchaseForm'
 import PurchaseTable from './components/PurchaseTable'
 
-// A CAD/USD toggle comes later; everything is shown in CAD for now.
-const DISPLAY_CURRENCY: Currency = 'CAD'
+const CURRENCY_STORAGE_KEY = 'displayCurrency'
+
+// The currency chosen last time, remembered in this browser. Defaults to CAD.
+function savedCurrency(): Currency {
+  try {
+    return localStorage.getItem(CURRENCY_STORAGE_KEY) === 'USD' ? 'USD' : 'CAD'
+  } catch {
+    return 'CAD' // storage can be unavailable, e.g. in some private windows
+  }
+}
 
 function App() {
   const [purchases, setPurchases] = useState<Purchase[]>([])
@@ -16,6 +25,10 @@ function App() {
   const [error, setError] = useState<string | null>(null)
   // The purchase being edited in the form, if any.
   const [editing, setEditing] = useState<Purchase | undefined>()
+  // The currency the user picked, and the currency the loaded portfolio is in.
+  // They differ briefly while new data loads, so the old numbers keep the right label.
+  const [currency, setCurrency] = useState<Currency>(savedCurrency)
+  const [portfolioCurrency, setPortfolioCurrency] = useState<Currency>(currency)
   const [portfolio, setPortfolio] = useState<PortfolioDay[]>([])
   const [portfolioError, setPortfolioError] = useState<string | null>(null)
   // True while the portfolio is reloading; the old chart stays visible but faded.
@@ -36,20 +49,42 @@ function App() {
       .finally(() => setLoading(false))
   }, [reloadCount])
 
-  // The portfolio changes whenever purchases do, so it reloads at the same times.
+  // The portfolio reloads when purchases change and when the currency changes.
   useEffect(() => {
-    getPortfolioHistory(DISPLAY_CURRENCY)
+    // If another load starts before this one finishes, ignore this one's result,
+    // so a slow, outdated response can't overwrite a newer one.
+    let outdated = false
+    getPortfolioHistory(currency)
       .then((data) => {
+        if (outdated) return
         setPortfolio(data)
+        setPortfolioCurrency(currency)
         setPortfolioError(null)
       })
-      .catch(() => setPortfolioError('Could not load the portfolio.'))
-      .finally(() => setPortfolioRefreshing(false))
-  }, [reloadCount])
+      .catch(() => {
+        if (!outdated) setPortfolioError('Could not load the portfolio.')
+      })
+      .finally(() => {
+        if (!outdated) setPortfolioRefreshing(false)
+      })
+    return () => {
+      outdated = true
+    }
+  }, [reloadCount, currency])
 
   function reload() {
     setPortfolioRefreshing(true)
     setReloadCount((count) => count + 1)
+  }
+
+  function handleCurrencyChange(newCurrency: Currency) {
+    setPortfolioRefreshing(true)
+    setCurrency(newCurrency)
+    try {
+      localStorage.setItem(CURRENCY_STORAGE_KEY, newCurrency)
+    } catch {
+      // Not remembering the choice is fine; the toggle still works.
+    }
   }
 
   function handleSaved() {
@@ -86,7 +121,10 @@ function App() {
       <h1>Metals Tracker</h1>
 
       <section className={portfolioRefreshing ? 'portfolio refreshing' : 'portfolio'}>
-        <h2>Portfolio</h2>
+        <div className="section-header">
+          <h2>Portfolio</h2>
+          <CurrencyToggle value={currency} onChange={handleCurrencyChange} />
+        </div>
         {portfolioError ? (
           <p className="form-error">{portfolioError}</p>
         ) : portfolio.length === 0 ? (
@@ -95,8 +133,8 @@ function App() {
           </p>
         ) : (
           <>
-            <PortfolioSummary history={portfolio} currency={DISPLAY_CURRENCY} />
-            <PortfolioChart history={portfolio} currency={DISPLAY_CURRENCY} />
+            <PortfolioSummary history={portfolio} currency={portfolioCurrency} />
+            <PortfolioChart history={portfolio} currency={portfolioCurrency} />
             <p className="chart-note">
               Values use the spot price. Dealers charge a premium above spot, so a new
               purchase usually starts out below what you paid.
