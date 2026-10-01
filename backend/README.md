@@ -13,19 +13,16 @@ Interactive API docs: http://localhost:8000/docs
 
 ## Spot prices
 
-Daily prices come from metalpriceapi.com. Copy `.env.example` to `.env` and add your
-`METALS_API_KEY`, then:
+Daily prices come from metals.dev. Copy `.env.example` to `.env` and add your
+`METALS_DEV_API_KEY`, then:
 
 ```powershell
-uv run python -m app.fetch_prices --check     # test the API key (uses no quota)
-uv run python -m app.fetch_prices             # download any missing days up to today
-uv run python -m app.fetch_prices --start 2026-01-01 --end 2026-03-31
+uv run python -m app.fetch_prices                       # download any missing days up to today
+uv run python -m app.fetch_prices --start 2026-07-10    # download from a given date
 ```
 
-The free plan allows 100 requests a month, only reaches back 30 days, and each request
-covers one metal and at most 5 days. So each run costs 4 requests per 5 days fetched:
-running it about once every 5 days uses ~24 requests a month. Don't run it daily
-(~120 a month).
+Each request returns all four metals for up to 30 days, so a monthly run uses about
+1 of the free plan's 100 requests a month.
 
 ## Changing the database (Alembic migrations)
 
