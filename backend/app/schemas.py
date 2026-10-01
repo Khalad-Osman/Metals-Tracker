@@ -1,4 +1,4 @@
-from datetime import date
+import datetime
 from decimal import Decimal
 
 from pydantic import field_serializer, field_validator
@@ -14,14 +14,14 @@ class PurchaseInput(SQLModel):
     metal: Metal
     weight: Decimal = Field(gt=0, max_digits=14, decimal_places=6)
     unit: WeightUnit
-    purchase_date: date
+    purchase_date: datetime.date
     price_paid: Decimal = Field(gt=0, max_digits=12, decimal_places=2)
     currency: Currency
 
     @field_validator("purchase_date")
     @classmethod
-    def not_in_the_future(cls, value: date) -> date:
-        if value > date.today():
+    def not_in_the_future(cls, value: datetime.date) -> datetime.date:
+        if value > datetime.date.today():
             raise ValueError("purchase date can't be in the future")
         return value
 
@@ -34,7 +34,7 @@ class PurchaseRead(SQLModel):
     weight_oz: Decimal
     original_weight: Decimal
     original_unit: WeightUnit
-    purchase_date: date
+    purchase_date: datetime.date
     price_paid: Decimal
     currency: Currency
 
@@ -42,3 +42,11 @@ class PurchaseRead(SQLModel):
     def without_trailing_zeros(self, value: Decimal) -> str:
         # The database pads to 6 decimal places; show "100" rather than "100.000000".
         return format(value.normalize(), "f")
+
+
+class MetalPriceRead(SQLModel):
+    """A metal's spot price on one day, in USD per troy ounce."""
+
+    metal: Metal
+    date: datetime.date
+    spot_price_usd: Decimal

@@ -1,8 +1,8 @@
-from datetime import date
+import datetime
 from decimal import Decimal
 from enum import Enum
 
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, SQLModel, UniqueConstraint
 
 from app.units import WeightUnit, to_troy_ounces
 
@@ -27,7 +27,7 @@ class Purchase(SQLModel, table=True):
     # What the user actually typed, so the purchase history can show it.
     original_weight: Decimal = Field(max_digits=14, decimal_places=6)
     original_unit: WeightUnit
-    purchase_date: date
+    purchase_date: datetime.date
     # Total price paid, in the purchase's own currency.
     price_paid: Decimal = Field(max_digits=12, decimal_places=2)
     currency: Currency
@@ -38,7 +38,7 @@ class Purchase(SQLModel, table=True):
         metal: Metal,
         weight: Decimal,
         unit: WeightUnit,
-        purchase_date: date,
+        purchase_date: datetime.date,
         price_paid: Decimal,
         currency: Currency,
     ) -> "Purchase":
@@ -52,3 +52,15 @@ class Purchase(SQLModel, table=True):
             price_paid=price_paid,
             currency=currency,
         )
+
+
+class MetalPrice(SQLModel, table=True):
+    """The spot price of one metal on one day, in USD per troy ounce."""
+
+    # Only one price per metal per day.
+    __table_args__ = (UniqueConstraint("metal", "date"),)
+
+    id: int | None = Field(default=None, primary_key=True)
+    metal: Metal
+    date: datetime.date
+    spot_price_usd: Decimal = Field(max_digits=12, decimal_places=4)
