@@ -57,3 +57,17 @@ class ExchangeRateRead(SQLModel):
 
     date: datetime.date
     usd_to_cad: Decimal
+
+
+class PortfolioDayRead(SQLModel):
+    """The portfolio on one day, in the requested currency.
+
+    Amounts are None when there's no recent enough price or exchange rate to
+    work them out. gain_percent is None before the first purchase.
+    """
+
+    date: datetime.date
+    value: Decimal | None
+    cost: Decimal | None
+    gain: Decimal | None
+    gain_percent: Decimal | None
