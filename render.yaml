@@ -1,0 +1,24 @@
+# Render Blueprint for the public demo API (free plan).
+# In Render: New > Blueprint, pick this repository, then fill in the values marked sync: false.
+services:
+  - name: metals-tracker-api
+    type: web
+    runtime: python
+    plan: free
+    rootDir: backend
+    # Render installs dependencies with uv when uv.lock is present.
+    buildCommand: uv sync --frozen --no-dev
+    # Apply any new migrations, then start the API on the port Render provides.
+    startCommand: uv run --no-sync alembic upgrade head && uv run --no-sync uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.11"
+      - key: DEMO_MODE
+        value: "true"
+      # The Neon demo database (never the real one), as postgresql+psycopg://...
+      - key: DATABASE_URL
+        sync: false
+      # The frontend's address on Cloudflare Pages, e.g. https://metals-tracker.pages.dev
+      - key: CORS_ORIGINS
+        sync: false
