@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
-import { deletePurchase, getHoldings, getPortfolioHistory, getSettings, listPurchases } from './api'
-import type { Currency, Holding, Metal, PortfolioDay, Purchase } from './api'
+import { ApiError, deletePurchase, getDemoMode, getHoldings, getPortfolioHistory, listPurchases } from './api'
+import type { Currency, DemoMode, Holding, Metal, PortfolioDay, Purchase } from './api'
 import { METAL_LABELS, UNIT_LABELS, formatDate } from './format'
 import HoldingsTable from './components/HoldingsTable'
 import PortfolioSummary from './components/PortfolioSummary'
@@ -51,8 +51,9 @@ function App() {
   const [error, setError] = useState<string | null>(null)
   // The purchase being edited in the form, if any.
   const [editing, setEditing] = useState<Purchase | undefined>()
-  // In the public demo, purchases are read-only.
-  const [demoMode, setDemoMode] = useState(false)
+  // Whether this is a public demo, and if so whether purchases can be changed.
+  const [demoMode, setDemoMode] = useState<DemoMode>('off')
+  const readOnly = demoMode === 'readonly'
 
   // What the user picked, and what the loaded data is actually for. They differ
   // briefly while new data loads, so the old numbers keep their correct labels.
@@ -76,10 +77,10 @@ function App() {
     return () => clearTimeout(timer)
   }, [])
 
-  // Ask the backend once whether this is the read-only demo.
+  // Ask the backend once whether this is a public demo.
   useEffect(() => {
-    getSettings()
-      .then((settings) => setDemoMode(settings.demo_mode))
+    getDemoMode()
+      .then(setDemoMode)
       .catch(() => {
         // If settings can't load, the other requests will show the error.
       })
@@ -174,8 +175,12 @@ function App() {
         setEditing(undefined)
       }
       reload()
-    } catch {
-      setError('Could not delete the purchase. Is the backend running?')
+    } catch (err) {
+      setError(
+        err instanceof ApiError
+          ? err.message
+          : 'Could not delete the purchase. Is the backend running?',
+      )
     }
   }
 
@@ -205,10 +210,12 @@ function App() {
         />
       </header>
 
-      {demoMode && (
+      {demoMode !== 'off' && (
         <p className="demo-banner" role="note">
-          <strong>Demo</strong> with sample purchases and real market prices. Adding and
-          editing purchases are turned off.{' '}
+          <strong>Demo</strong> with sample purchases and real market prices.{' '}
+          {readOnly
+            ? 'Adding and editing purchases are turned off.'
+            : 'Try adding or editing a purchase: changes are shared with other visitors and reset every night.'}{' '}
           <a href="https://github.com/Khalad-Osman/Metals-Tracker">View the code on GitHub</a>
         </p>
       )}
@@ -257,7 +264,7 @@ function App() {
         </section>
       )}
 
-      {!demoMode && (
+      {!readOnly && (
         <PurchaseForm
           // A new key resets the form whenever we switch between adding and editing.
           key={editing?.id ?? 'new'}
@@ -278,8 +285,8 @@ function App() {
             purchases={purchases}
             editingId={editing?.id}
             // Without these the table is read-only, as in the demo.
-            onEdit={demoMode ? undefined : handleEdit}
-            onDelete={demoMode ? undefined : handleDelete}
+            onEdit={readOnly ? undefined : handleEdit}
+            onDelete={readOnly ? undefined : handleDelete}
           />
         )}
       </section>

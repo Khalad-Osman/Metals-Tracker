@@ -32,6 +32,10 @@ export type PurchaseInput = {
 // Field name -> message, e.g. { weight: "Input should be greater than 0" }
 export type FieldErrors = Partial<Record<keyof PurchaseInput, string>>
 
+// The backend refused a request and explained why, e.g. "The demo is full".
+// (A network failure is a different error: the server couldn't be reached at all.)
+export class ApiError extends Error {}
+
 export class ValidationError extends Error {
   fieldErrors: FieldErrors
 
@@ -89,7 +93,10 @@ async function throwIfFailed(response: Response, message: string): Promise<void>
   }
 
   if (!response.ok) {
-    throw new Error(`${message} (error ${response.status})`)
+    // Use the backend's own explanation when it gives one.
+    const body = await response.json().catch(() => null)
+    const reason = typeof body?.detail === 'string' ? body.detail : null
+    throw new ApiError(reason ?? `${message} (error ${response.status})`)
   }
 }
 
@@ -138,14 +145,19 @@ export async function getHoldings(currency: Currency): Promise<Holding[]> {
   return response.json()
 }
 
-export type Settings = {
-  demo_mode: boolean // public read-only demo: purchases can't be changed
-}
+// off: the normal app. readonly: public demo where purchases can't be changed.
+// sandbox: public demo where anyone can change purchases, within limits.
+export type DemoMode = 'off' | 'readonly' | 'sandbox'
 
-export async function getSettings(): Promise<Settings> {
+export async function getDemoMode(): Promise<DemoMode> {
   const response = await fetch(`${API_URL}/settings`)
   if (!response.ok) {
     throw new Error(`Could not load settings (error ${response.status})`)
   }
-  return response.json()
+  const settings: { demo_mode: DemoMode | boolean } = await response.json()
+  // Older backends sent true/false (true meant read-only).
+  if (typeof settings.demo_mode === 'boolean') {
+    return settings.demo_mode ? 'readonly' : 'off'
+  }
+  return settings.demo_mode
 }

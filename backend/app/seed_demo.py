@@ -41,25 +41,28 @@ class SeedError(Exception):
     """The demo data can't be added safely."""
 
 
-def seed_demo(
+def first_demo_date(today: datetime.date) -> datetime.date:
+    return today - datetime.timedelta(days=max(days for *_, days, _ in DEMO_PURCHASES))
+
+
+def download_demo_market_data(
     session: Session,
     today: datetime.date,
     make_rate_client: Callable[[], httpx2.Client],
     make_price_client: Callable[[], httpx2.Client],
-) -> list[Purchase]:
-    """Download market data for the demo period and add the sample purchases."""
-    if session.exec(select(func.count()).select_from(Purchase)).one() > 0:
-        raise SeedError("The database already has purchases; demo data is only added to an empty one.")
-
+) -> None:
+    """Download prices and exchange rates covering the demo period."""
     # Start a week before the first purchase: if it falls on a weekend or holiday,
     # there's no rate that day, and the most recent earlier one is used instead.
-    first_purchase = today - datetime.timedelta(days=max(days for *_, days, _ in DEMO_PURCHASES))
-    start = first_purchase - datetime.timedelta(days=MAX_DAYS_OLD)
+    start = first_demo_date(today) - datetime.timedelta(days=MAX_DAYS_OLD)
     with make_rate_client() as client:
         rate_fetcher.update_rates(session, client, start, today)
     with make_price_client() as client:
         price_fetcher.update_prices(session, client, start, today)
 
+
+def add_demo_purchases(session: Session, today: datetime.date) -> list[Purchase]:
+    """Add the sample purchases, priced from stored market data (no downloads)."""
     purchases = []
     for metal, weight, unit, days_ago, currency in DEMO_PURCHASES:
         day = today - datetime.timedelta(days=days_ago)
@@ -84,6 +87,19 @@ def seed_demo(
         purchases.append(purchase)
     session.commit()
     return purchases
+
+
+def seed_demo(
+    session: Session,
+    today: datetime.date,
+    make_rate_client: Callable[[], httpx2.Client],
+    make_price_client: Callable[[], httpx2.Client],
+) -> list[Purchase]:
+    """Set up an empty database for the demo: market data, then the sample purchases."""
+    if session.exec(select(func.count()).select_from(Purchase)).one() > 0:
+        raise SeedError("The database already has purchases; demo data is only added to an empty one.")
+    download_demo_market_data(session, today, make_rate_client, make_price_client)
+    return add_demo_purchases(session, today)
 
 
 def main() -> int:

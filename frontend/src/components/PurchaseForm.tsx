@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { createPurchase, updatePurchase, ValidationError } from '../api'
+import { ApiError, createPurchase, updatePurchase, ValidationError } from '../api'
 import type { Currency, FieldErrors, Metal, Purchase, PurchaseInput, WeightUnit } from '../api'
 import { METAL_LABELS, UNIT_LABELS, todayIso } from '../format'
 
@@ -64,6 +64,8 @@ export default function PurchaseForm({ editing, onSaved, onCancelEdit }: Props) 
     } catch (err) {
       if (err instanceof ValidationError) {
         setFieldErrors(err.fieldErrors)
+      } else if (err instanceof ApiError) {
+        setError(err.message)
       } else {
         setError('Could not reach the server. Is the backend running?')
       }
