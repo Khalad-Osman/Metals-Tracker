@@ -6,8 +6,9 @@ A portfolio tracker for physical precious metals. Log purchases of gold, silver,
 platinum and palladium, and see what your holdings are worth over time in Canadian
 or US dollars, using daily spot prices and Bank of Canada exchange rates.
 
-**[Live demo](https://metals-tracker.khaladosman213.workers.dev)**: read-only, with sample
-purchases and real market prices. It runs on free hosting, so if nobody has visited for a
+**[Live demo](https://metals-tracker.khaladosman213.workers.dev)**: try adding or editing a
+purchase. It starts with sample purchases and real market prices, is shared by all
+visitors, and resets every night. It runs on free hosting, so if nobody has visited for a
 while, the first load can take up to a minute while the server starts.
 
 ![Portfolio view in light mode, showing all metals](docs/screenshots/portfolio-light.png)
@@ -55,8 +56,9 @@ flowchart LR
     Update -->|USD/CAD rates| BoC["Bank of Canada"]
 ```
 
-The public demo runs the same code with `DEMO_MODE` on (purchases are read-only) and its
-own database, which a scheduled GitHub Actions workflow updates with market data daily.
+The public demo runs the same code in sandbox mode (`DEMO_MODE=sandbox`: anyone can change
+purchases, within limits) with its own database. A scheduled GitHub Actions workflow
+updates its market data and resets its purchases every night.
 
 The backend stores three kinds of data: **purchases** (in their original currency and
 unit), **daily spot prices** (USD per troy ounce, one row per metal per day), and
