@@ -419,15 +419,6 @@ td.actions {
 
 /* --- Holdings by metal --- */
 
-.holdings {
-  margin-top: 1.5rem;
-}
-
-.holdings h3 {
-  font-size: 1rem;
-  margin: 0 0 0.5rem;
-}
-
 .muted {
   color: var(--muted);
 }
@@ -459,4 +450,18 @@ td.actions {
   height: 100%;
   border-radius: 3px;
   background: var(--chart-value);
+}
+
+/* --- Page header: title on the left, display currency on the right --- */
+
+.page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.page-header h1 {
+  margin: 0;
 }

@@ -390,3 +390,47 @@ def test_holdings_endpoint_defaults_to_today_in_cad(client: TestClient, session:
 def test_holdings_endpoint_rejects_bad_input(client: TestClient):
     assert client.get("/portfolio/holdings", params={"currency": "EUR"}).status_code == 422
     assert client.get("/portfolio/holdings", params={"date": "soon"}).status_code == 422
+
+
+
+# --- Filtering the history to one metal ---
+
+
+def test_history_for_one_metal_counts_only_that_metal(session: Session, gold_and_silver):
+    [gold] = portfolio_history(session, Currency.USD, MON, MON, metal=Metal.GOLD)
+    [silver] = portfolio_history(session, Currency.USD, MON, MON, metal=Metal.SILVER)
+    [everything] = portfolio_history(session, Currency.USD, MON, MON)
+
+    assert (gold.value, gold.cost, gold.gain) == (
+        Decimal("8200.00"),
+        Decimal("8000.00"),
+        Decimal("200.00"),
+    )
+    assert (silver.value, silver.cost) == (Decimal("5000.00"), Decimal("5000.00"))
+    assert gold.value + silver.value == everything.value
+
+
+def test_one_metal_is_zero_before_its_own_first_purchase(session: Session, gold_and_silver):
+    [silver_on_friday] = portfolio_history(session, Currency.USD, FRI, FRI, metal=Metal.SILVER)
+
+    assert silver_on_friday.value == Decimal("0")  # silver was only bought on Monday
+    assert silver_on_friday.gain_percent is None
+
+
+def test_endpoint_filters_by_metal_and_starts_at_its_first_purchase(
+    client: TestClient, gold_and_silver
+):
+    history = client.get(
+        "/portfolio/history", params={"currency": "USD", "metal": "silver", "end": "2026-09-14"}
+    ).json()
+
+    assert [d["date"] for d in history] == ["2026-09-14"]  # silver's first purchase
+    assert history[0]["value"] == "5000.00"
+
+
+def test_endpoint_returns_empty_list_for_a_metal_not_owned(client: TestClient, gold_and_silver):
+    assert client.get("/portfolio/history", params={"metal": "platinum"}).json() == []
+
+
+def test_endpoint_rejects_unknown_metal(client: TestClient):
+    assert client.get("/portfolio/history", params={"metal": "copper"}).status_code == 422

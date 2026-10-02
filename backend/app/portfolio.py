@@ -139,10 +139,20 @@ def gain_and_percent(
 
 
 def portfolio_history(
-    session: Session, currency: Currency, start: datetime.date, end: datetime.date
+    session: Session,
+    currency: Currency,
+    start: datetime.date,
+    end: datetime.date,
+    metal: Metal | None = None,
 ) -> list[PortfolioDay]:
-    """The portfolio's value, cost and gain for every day from start to end (inclusive)."""
-    purchases = session.exec(select(Purchase)).all()
+    """The portfolio's value, cost and gain for every day from start to end (inclusive).
+
+    With `metal`, only that metal's purchases count, e.g. just your gold.
+    """
+    statement = select(Purchase)
+    if metal is not None:
+        statement = statement.where(Purchase.metal == metal)
+    purchases = session.exec(statement).all()
     market = Market(session, currency)
 
     history = []

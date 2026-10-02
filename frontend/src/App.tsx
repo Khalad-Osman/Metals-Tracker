@@ -1,23 +1,45 @@
 import { useEffect, useState } from 'react'
 import { deletePurchase, getHoldings, getPortfolioHistory, listPurchases } from './api'
-import type { Currency, Holding, PortfolioDay, Purchase } from './api'
+import type { Currency, Holding, Metal, PortfolioDay, Purchase } from './api'
 import { METAL_LABELS, UNIT_LABELS, formatDate } from './format'
-import CurrencyToggle from './components/CurrencyToggle'
 import HoldingsTable from './components/HoldingsTable'
 import PortfolioChart from './components/PortfolioChart'
 import PortfolioSummary from './components/PortfolioSummary'
 import PurchaseForm from './components/PurchaseForm'
 import PurchaseTable from './components/PurchaseTable'
+import Toggle from './components/Toggle'
+
+// Which metals the portfolio chart and summary show: all of them, or just one.
+type MetalFilter = Metal | 'all'
 
 const CURRENCY_STORAGE_KEY = 'displayCurrency'
+const METAL_FILTER_STORAGE_KEY = 'portfolioMetal'
 
-// The currency chosen last time, remembered in this browser. Defaults to CAD.
-function savedCurrency(): Currency {
+// Choices are remembered in this browser. Storage can be unavailable (e.g. in
+// some private windows); then the defaults are used and nothing is remembered.
+function loadSetting(key: string): string | null {
   try {
-    return localStorage.getItem(CURRENCY_STORAGE_KEY) === 'USD' ? 'USD' : 'CAD'
+    return localStorage.getItem(key)
   } catch {
-    return 'CAD' // storage can be unavailable, e.g. in some private windows
+    return null
   }
+}
+
+function saveSetting(key: string, value: string) {
+  try {
+    localStorage.setItem(key, value)
+  } catch {
+    // Not remembering the choice is fine; the controls still work.
+  }
+}
+
+function savedCurrency(): Currency {
+  return loadSetting(CURRENCY_STORAGE_KEY) === 'USD' ? 'USD' : 'CAD'
+}
+
+function savedMetalFilter(): MetalFilter {
+  const saved = loadSetting(METAL_FILTER_STORAGE_KEY)
+  return saved && Object.hasOwn(METAL_LABELS, saved) ? (saved as Metal) : 'all'
 }
 
 function App() {
@@ -26,10 +48,14 @@ function App() {
   const [error, setError] = useState<string | null>(null)
   // The purchase being edited in the form, if any.
   const [editing, setEditing] = useState<Purchase | undefined>()
-  // The currency the user picked, and the currency the loaded portfolio is in.
-  // They differ briefly while new data loads, so the old numbers keep the right label.
+
+  // What the user picked, and what the loaded data is actually for. They differ
+  // briefly while new data loads, so the old numbers keep their correct labels.
   const [currency, setCurrency] = useState<Currency>(savedCurrency)
-  const [portfolioCurrency, setPortfolioCurrency] = useState<Currency>(currency)
+  const [metalFilter, setMetalFilter] = useState<MetalFilter>(savedMetalFilter)
+  const [loadedCurrency, setLoadedCurrency] = useState<Currency>(currency)
+  const [loadedMetal, setLoadedMetal] = useState<MetalFilter>('all')
+
   const [portfolio, setPortfolio] = useState<PortfolioDay[]>([])
   const [holdings, setHoldings] = useState<Holding[]>([])
   const [portfolioError, setPortfolioError] = useState<string | null>(null)
@@ -51,30 +77,40 @@ function App() {
       .finally(() => setLoading(false))
   }, [reloadCount])
 
-  // The portfolio reloads when purchases change and when the currency changes.
+  // The portfolio reloads when purchases change, and when the currency or metal changes.
   useEffect(() => {
     // If another load starts before this one finishes, ignore this one's result,
     // so a slow, outdated response can't overwrite a newer one.
     let outdated = false
+    const metal = metalFilter === 'all' ? undefined : metalFilter
+
     // Loaded together so the chart and the holdings always show the same currency.
-    Promise.all([getPortfolioHistory(currency), getHoldings(currency)])
+    Promise.all([getPortfolioHistory(currency, metal), getHoldings(currency)])
       .then(([history, byMetal]) => {
         if (outdated) return
+        // A single metal only makes sense if it's owned and there's more than one
+        // metal to choose from; otherwise show everything (this loads again).
+        const owned = byMetal.some((holding) => holding.metal === metal)
+        if (metal && (!owned || byMetal.length < 2)) {
+          setMetalFilter('all')
+          return
+        }
         setPortfolio(history)
         setHoldings(byMetal)
-        setPortfolioCurrency(currency)
+        setLoadedCurrency(currency)
+        setLoadedMetal(metalFilter)
         setPortfolioError(null)
+        setPortfolioRefreshing(false)
       })
       .catch(() => {
-        if (!outdated) setPortfolioError('Could not load the portfolio.')
-      })
-      .finally(() => {
-        if (!outdated) setPortfolioRefreshing(false)
+        if (outdated) return
+        setPortfolioError('Could not load the portfolio.')
+        setPortfolioRefreshing(false)
       })
     return () => {
       outdated = true
     }
-  }, [reloadCount, currency])
+  }, [reloadCount, currency, metalFilter])
 
   function reload() {
     setPortfolioRefreshing(true)
@@ -84,11 +120,13 @@ function App() {
   function handleCurrencyChange(newCurrency: Currency) {
     setPortfolioRefreshing(true)
     setCurrency(newCurrency)
-    try {
-      localStorage.setItem(CURRENCY_STORAGE_KEY, newCurrency)
-    } catch {
-      // Not remembering the choice is fine; the toggle still works.
-    }
+    saveSetting(CURRENCY_STORAGE_KEY, newCurrency)
+  }
+
+  function handleMetalFilterChange(newFilter: MetalFilter) {
+    setPortfolioRefreshing(true)
+    setMetalFilter(newFilter)
+    saveSetting(METAL_FILTER_STORAGE_KEY, newFilter)
   }
 
   function handleSaved() {
@@ -120,14 +158,43 @@ function App() {
     }
   }
 
+  // The metal filter is only offered when there's more than one metal to pick from.
+  const metalOptions = [
+    { value: 'all' as MetalFilter, label: 'All' },
+    ...holdings.map((holding) => ({
+      value: holding.metal as MetalFilter,
+      label: METAL_LABELS[holding.metal],
+    })),
+  ]
+  // What the summary and chart describe, e.g. "Portfolio" or "Gold".
+  const subject = loadedMetal === 'all' ? 'Portfolio' : METAL_LABELS[loadedMetal]
+
   return (
     <main>
-      <h1>Metals Tracker</h1>
+      <header className="page-header">
+        <h1>Metals Tracker</h1>
+        <Toggle
+          label="Display currency"
+          options={[
+            { value: 'CAD', label: 'CAD' },
+            { value: 'USD', label: 'USD' },
+          ]}
+          value={currency}
+          onChange={handleCurrencyChange}
+        />
+      </header>
 
       <section className={portfolioRefreshing ? 'portfolio refreshing' : 'portfolio'}>
         <div className="section-header">
           <h2>Portfolio</h2>
-          <CurrencyToggle value={currency} onChange={handleCurrencyChange} />
+          {holdings.length > 1 && (
+            <Toggle
+              label="Show metal"
+              options={metalOptions}
+              value={metalFilter}
+              onChange={handleMetalFilterChange}
+            />
+          )}
         </div>
         {portfolioError ? (
           <p className="form-error">{portfolioError}</p>
@@ -137,9 +204,8 @@ function App() {
           </p>
         ) : (
           <>
-            <PortfolioSummary history={portfolio} currency={portfolioCurrency} />
-            <PortfolioChart history={portfolio} currency={portfolioCurrency} />
-            <HoldingsTable holdings={holdings} currency={portfolioCurrency} />
+            <PortfolioSummary history={portfolio} currency={loadedCurrency} subject={subject} />
+            <PortfolioChart history={portfolio} currency={loadedCurrency} subject={subject} />
             <p className="chart-note">
               Values use the spot price. Dealers charge a premium above spot, so a new
               purchase usually starts out below what you paid.
@@ -147,6 +213,13 @@ function App() {
           </>
         )}
       </section>
+
+      {holdings.length > 0 && (
+        <section className={portfolioRefreshing ? 'portfolio refreshing' : 'portfolio'}>
+          <h2>Holdings by metal</h2>
+          <HoldingsTable holdings={holdings} currency={loadedCurrency} />
+        </section>
+      )}
 
       <PurchaseForm
         // A new key resets the form whenever we switch between adding and editing.

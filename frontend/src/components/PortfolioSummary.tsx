@@ -4,10 +4,12 @@ import { formatDate, formatMoney, formatSignedMoney, formatSignedPercent } from 
 type Props = {
   history: PortfolioDay[]
   currency: Currency
+  // What the figures describe, e.g. "Portfolio" or "Gold".
+  subject: string
 }
 
 // Headline figures for the most recent day that has a known value.
-export default function PortfolioSummary({ history, currency }: Props) {
+export default function PortfolioSummary({ history, currency, subject }: Props) {
   const latest = history.findLast((day) => day.value !== null)
   if (!latest || latest.value === null || latest.cost === null || latest.gain === null) {
     return null
@@ -21,7 +23,7 @@ export default function PortfolioSummary({ history, currency }: Props) {
   return (
     <div className="summary">
       <div className="stat">
-        <p className="stat-label">Market value</p>
+        <p className="stat-label">{subject === 'Portfolio' ? 'Market value' : `${subject} value`}</p>
         <p className="stat-value hero">{formatMoney(latest.value, currency)}</p>
         <p className="stat-note">at spot price on {formatDate(latest.date)}</p>
       </div>

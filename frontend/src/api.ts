@@ -101,8 +101,16 @@ export type PortfolioDay = {
   gain_percent: string | null
 }
 
-export async function getPortfolioHistory(currency: Currency): Promise<PortfolioDay[]> {
-  const response = await fetch(`${API_URL}/portfolio/history?currency=${currency}`)
+// With `metal`, only that metal's purchases count (e.g. just your gold).
+export async function getPortfolioHistory(
+  currency: Currency,
+  metal?: Metal,
+): Promise<PortfolioDay[]> {
+  const params = new URLSearchParams({ currency })
+  if (metal) {
+    params.set('metal', metal)
+  }
+  const response = await fetch(`${API_URL}/portfolio/history?${params}`)
   if (!response.ok) {
     throw new Error(`Could not load portfolio (error ${response.status})`)
   }

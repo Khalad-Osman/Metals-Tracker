@@ -22,6 +22,8 @@ import {
 type Props = {
   history: PortfolioDay[]
   currency: Currency
+  // What the chart shows, e.g. "Portfolio" or "Gold".
+  subject: string
 }
 
 // One point on the chart. Numbers are only for drawing; the exact strings
@@ -33,7 +35,7 @@ type ChartRow = {
   day: PortfolioDay
 }
 
-export default function PortfolioChart({ history, currency }: Props) {
+export default function PortfolioChart({ history, currency, subject }: Props) {
   const [showTable, setShowTable] = useState(false)
 
   const rows: ChartRow[] = history.map((day) => ({
@@ -48,7 +50,7 @@ export default function PortfolioChart({ history, currency }: Props) {
     <figure className="chart">
       <div className="chart-header">
         <figcaption>
-          <span className="chart-title">Portfolio value over time</span>
+          <span className="chart-title">{subject} value over time</span>
           <span className="chart-subtitle">
             Daily value at spot price, compared with what you paid ({currency})
           </span>
@@ -204,7 +206,7 @@ function TooltipRow({
 }
 
 // The same data as the chart, readable without hovering. Newest first.
-function HistoryTable({ history, currency }: Props) {
+function HistoryTable({ history, currency }: Omit<Props, 'subject'>) {
   const show = (amount: string | null) => (amount === null ? '—' : formatMoney(amount, currency))
 
   return (

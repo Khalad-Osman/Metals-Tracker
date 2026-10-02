@@ -21,59 +21,56 @@ export default function HoldingsTable({ holdings, currency }: Props) {
   const money = (amount: string | null) => (amount === null ? '—' : formatMoney(amount, currency))
 
   return (
-    <div className="holdings">
-      <h3>Holdings by metal</h3>
-      <div className="table-wrapper">
-        <table>
-          <thead>
-            <tr>
-              <th>Metal</th>
-              <th className="number">Troy ounces</th>
-              <th className="number">Value</th>
-              <th className="number">Cost</th>
-              <th className="number">Gain / loss</th>
-              <th>Share of value</th>
+    <div className="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Metal</th>
+            <th className="number">Troy ounces</th>
+            <th className="number">Value</th>
+            <th className="number">Cost</th>
+            <th className="number">Gain / loss</th>
+            <th>Share of value</th>
+          </tr>
+        </thead>
+        <tbody>
+          {holdings.map((holding) => (
+            <tr key={holding.metal}>
+              <td>{METAL_LABELS[holding.metal]}</td>
+              <td className="number">{formatOunces(holding.weight_oz)}</td>
+              <td className="number">{money(holding.value)}</td>
+              <td className="number">{money(holding.cost)}</td>
+              <td className="number">
+                {holding.gain === null ? (
+                  '—'
+                ) : (
+                  <>
+                    {formatSignedMoney(holding.gain, currency)}
+                    {holding.gain_percent !== null && (
+                      <span className="muted"> ({formatSignedPercent(holding.gain_percent)})</span>
+                    )}
+                  </>
+                )}
+              </td>
+              <td>
+                {holding.share_percent === null ? (
+                  '—'
+                ) : (
+                  <div className="share">
+                    <span className="share-value">{Number(holding.share_percent).toFixed(1)}%</span>
+                    <span className="share-track" aria-hidden="true">
+                      <span
+                        className="share-fill"
+                        style={{ width: `${Number(holding.share_percent)}%` }}
+                      />
+                    </span>
+                  </div>
+                )}
+              </td>
             </tr>
-          </thead>
-          <tbody>
-            {holdings.map((holding) => (
-              <tr key={holding.metal}>
-                <td>{METAL_LABELS[holding.metal]}</td>
-                <td className="number">{formatOunces(holding.weight_oz)}</td>
-                <td className="number">{money(holding.value)}</td>
-                <td className="number">{money(holding.cost)}</td>
-                <td className="number">
-                  {holding.gain === null ? (
-                    '—'
-                  ) : (
-                    <>
-                      {formatSignedMoney(holding.gain, currency)}
-                      {holding.gain_percent !== null && (
-                        <span className="muted"> ({formatSignedPercent(holding.gain_percent)})</span>
-                      )}
-                    </>
-                  )}
-                </td>
-                <td>
-                  {holding.share_percent === null ? (
-                    '—'
-                  ) : (
-                    <div className="share">
-                      <span className="share-value">{Number(holding.share_percent).toFixed(1)}%</span>
-                      <span className="share-track" aria-hidden="true">
-                        <span
-                          className="share-fill"
-                          style={{ width: `${Number(holding.share_percent)}%` }}
-                        />
-                      </span>
-                    </div>
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          ))}
+        </tbody>
+      </table>
     </div>
   )
 }
