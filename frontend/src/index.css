@@ -514,3 +514,19 @@ td.actions {
 .chart-placeholder {
   min-height: 405px;
 }
+
+/* --- Demo banner --- */
+
+.demo-banner {
+  margin: 0 0 1.5rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--accent);
+  border-radius: 6px;
+  background: var(--surface);
+  font-size: 0.9rem;
+}
+
+.demo-banner a {
+  color: var(--accent-text);
+}

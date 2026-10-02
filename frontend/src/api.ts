@@ -1,7 +1,9 @@
 // Talks to the FastAPI backend. Weights and money come back as strings
 // (e.g. "3.21507466") so they stay exact; we only turn them into numbers to display them.
 
-const API_URL = 'http://localhost:8000'
+// The backend's address. Set VITE_API_URL when building for deployment;
+// locally it defaults to the FastAPI dev server.
+const API_URL = import.meta.env.VITE_API_URL ?? 'http://localhost:8000'
 
 export type Metal = 'gold' | 'silver' | 'platinum' | 'palladium'
 export type WeightUnit = 'g' | 'troy_oz' | 'kg'
@@ -132,6 +134,18 @@ export async function getHoldings(currency: Currency): Promise<Holding[]> {
   const response = await fetch(`${API_URL}/portfolio/holdings?currency=${currency}`)
   if (!response.ok) {
     throw new Error(`Could not load holdings (error ${response.status})`)
+  }
+  return response.json()
+}
+
+export type Settings = {
+  demo_mode: boolean // public read-only demo: purchases can't be changed
+}
+
+export async function getSettings(): Promise<Settings> {
+  const response = await fetch(`${API_URL}/settings`)
+  if (!response.ok) {
+    throw new Error(`Could not load settings (error ${response.status})`)
   }
   return response.json()
 }

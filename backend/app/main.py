@@ -1,14 +1,15 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app import config
 from app.routers import exchange_rates, portfolio, prices, purchases
 
 app = FastAPI(title="Metals Tracker API")
 
-# Allow the Vite dev server (React frontend) to call this API from the browser.
+# Allow the frontend to call this API from the browser.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=config.CORS_ORIGINS,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -18,6 +19,12 @@ app.add_middleware(
 def health_check() -> dict[str, str]:
     """Simple endpoint to confirm the API is running."""
     return {"status": "ok"}
+
+
+@app.get("/settings")
+def get_settings() -> dict[str, bool]:
+    """Settings the frontend needs, e.g. whether this is the read-only demo."""
+    return {"demo_mode": config.DEMO_MODE}
 
 
 app.include_router(purchases.router)

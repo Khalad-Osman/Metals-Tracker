@@ -56,6 +56,30 @@ $env:TEST_DATABASE_URL = "postgresql+psycopg://metals:<password>@127.0.0.1:5432/
 uv run pytest
 ```
 
+## Settings
+
+All settings are environment variables, read from `backend/.env` when it exists.
+
+| Variable | Purpose | Default |
+|---|---|---|
+| `DATABASE_URL` | Database to use | SQLite file `backend/metals.db` |
+| `METALS_DEV_API_KEY` | metals.dev API key, for spot prices | none (price updates fail without it) |
+| `CORS_ORIGINS` | Websites allowed to call the API from a browser, comma-separated | `http://localhost:5173` |
+| `DEMO_MODE` | `true` makes purchases read-only, for a public demo | off |
+
+## Public demo
+
+For a public demo, use a separate, empty database (never your real one) and:
+
+```powershell
+uv run alembic upgrade head          # create the tables
+uv run python -m app.seed_demo       # market data + three sample purchases (about 3 API requests)
+```
+
+`seed_demo` refuses to run if the database already has purchases. Then run the API with
+`DEMO_MODE=true` and `CORS_ORIGINS` set to the frontend's address, and build the frontend
+with `VITE_API_URL` set to the API's address.
+
 ## Updating market data
 
 One command brings exchange rates and spot prices up to date:
