@@ -88,8 +88,9 @@ quietly using stale data.
 provider's documentation omitted three free-plan limits (one metal per request, at most
 5 days per request, nothing older than 30 days), which were discovered against the real
 API. That made backfilling purchase history impossible, so the fetcher was switched to
-metals.dev, which returns all four metals for 30 days per request. Only the fetcher
-module changed; the rest of the app didn't notice.
+metals.dev, which returns all four metals for 30 days per request. The changes stayed
+in the price-fetching code; the API, database, portfolio calculations and frontend
+didn't change.
 
 **Schema changes go through Alembic migrations**, and a test fails if a model changes
 without a migration. Testing on PostgreSQL found that undoing a migration left enum
