@@ -1,14 +1,24 @@
+/* All colors are defined here, once for light mode and once for dark mode.
+   The browser picks the set that matches the system's light/dark setting.
+   Every text color was checked for WCAG contrast (at least 4.5:1). */
 :root {
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.5;
-  color: #1f2328;
-  background-color: #f6f8fa;
+  color-scheme: light; /* native controls (inputs, date pickers, scrollbars) */
 
+  --page: #f6f8fa;
+  --text: #1f2328;
   --surface: #ffffff;
   --border: #d0d7de;
   --muted: #59636e;
-  --accent: #9a6700;
+  --hover: #f3f4f6;
+  --shadow: rgba(0, 0, 0, 0.08);
+  --editing-row: #fff8c5;
+
+  --accent: #9a6700; /* button and toggle fills */
   --accent-hover: #7d5300;
+  --accent-text: #9a6700; /* gold used as text, e.g. "Edit" links */
+  --on-accent: #ffffff; /* text on accent fills */
   --error: #cf222e;
 
   /* Charts (validated palette: blue for the value, gray for context) */
@@ -17,13 +27,46 @@
   --chart-cost: #898781;
   --chart-grid: #e1e0d9;
   --chart-axis: #c3c2b7;
-  --chart-muted: #898781;
+  --chart-muted: #59636e; /* axis labels: same as --muted, 6.1:1 on white */
   --gain-text: #006300;
   --loss-text: #d03b3b;
 }
 
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+
+    --page: #0d0d0d;
+    --text: #f0efea;
+    --surface: #1a1a19;
+    --border: #3d3d3a;
+    --muted: #a8a79f;
+    --hover: #262624;
+    --shadow: rgba(0, 0, 0, 0.5);
+    --editing-row: #3b2f00;
+
+    --accent: #9a6700;
+    --accent-hover: #845800;
+    --accent-text: #e3b341; /* plain gold is too dark to read on a dark surface */
+    --on-accent: #ffffff;
+    --error: #ff7b72;
+
+    /* The chart palette's dark-mode steps, validated against the dark surface. */
+    --chart-value: #3987e5;
+    --chart-track: #184f95;
+    --chart-cost: #898781;
+    --chart-grid: #2c2c2a;
+    --chart-axis: #383835;
+    --chart-muted: #a8a79f;
+    --gain-text: #3fb950;
+    --loss-text: #ff7b72;
+  }
+}
+
 body {
   margin: 0;
+  color: var(--text);
+  background-color: var(--page);
 }
 
 main {
@@ -121,7 +164,7 @@ button:disabled {
 button.primary {
   background: var(--accent);
   border-color: var(--accent);
-  color: #ffffff;
+  color: var(--on-accent);
 }
 
 button.primary:hover:not(:disabled) {
@@ -129,7 +172,7 @@ button.primary:hover:not(:disabled) {
 }
 
 button.secondary:hover:not(:disabled) {
-  background: #f3f4f6;
+  background: var(--hover);
 }
 
 /* Text-style buttons used in the table rows */
@@ -137,7 +180,7 @@ button.link {
   border: none;
   background: none;
   padding: 0.15rem 0.35rem;
-  color: var(--accent);
+  color: var(--accent-text);
   font-size: 0.875rem;
 }
 
@@ -194,7 +237,7 @@ tbody tr:last-child td {
 }
 
 tr.editing td {
-  background: #fff8c5;
+  background: var(--editing-row);
 }
 
 td.actions {
@@ -345,7 +388,7 @@ td.actions {
   border: 1px solid var(--border);
   border-radius: 6px;
   padding: 0.5rem 0.75rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  box-shadow: 0 2px 8px var(--shadow);
   font-size: 0.85rem;
 }
 
@@ -404,12 +447,12 @@ td.actions {
 }
 
 .toggle button:hover:not([aria-pressed='true']) {
-  background: #f3f4f6;
+  background: var(--hover);
 }
 
 .toggle button[aria-pressed='true'] {
   background: var(--accent);
-  color: #ffffff;
+  color: var(--on-accent);
 }
 
 .toggle button:focus-visible {
