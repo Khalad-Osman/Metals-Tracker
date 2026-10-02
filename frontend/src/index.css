@@ -465,3 +465,9 @@ td.actions {
 .page-header h1 {
   margin: 0;
 }
+
+/* Shown while the chart's code loads. Keep this equal to the rendered chart's height
+   (header + legend + plot, measured at 405px) so nothing jumps; update it if the chart changes. */
+.chart-placeholder {
+  min-height: 405px;
+}

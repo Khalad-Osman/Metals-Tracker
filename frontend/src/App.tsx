@@ -1,13 +1,16 @@
-import { useEffect, useState } from 'react'
+import { Suspense, lazy, useEffect, useState } from 'react'
 import { deletePurchase, getHoldings, getPortfolioHistory, listPurchases } from './api'
 import type { Currency, Holding, Metal, PortfolioDay, Purchase } from './api'
 import { METAL_LABELS, UNIT_LABELS, formatDate } from './format'
 import HoldingsTable from './components/HoldingsTable'
-import PortfolioChart from './components/PortfolioChart'
 import PortfolioSummary from './components/PortfolioSummary'
 import PurchaseForm from './components/PurchaseForm'
 import PurchaseTable from './components/PurchaseTable'
 import Toggle from './components/Toggle'
+
+// The chart library (Recharts) is most of the app's code, so it's downloaded
+// separately: the page and summary figures show first, then the chart.
+const PortfolioChart = lazy(() => import('./components/PortfolioChart'))
 
 // Which metals the portfolio chart and summary show: all of them, or just one.
 type MetalFilter = Metal | 'all'
@@ -205,7 +208,10 @@ function App() {
         ) : (
           <>
             <PortfolioSummary history={portfolio} currency={loadedCurrency} subject={subject} />
-            <PortfolioChart history={portfolio} currency={loadedCurrency} subject={subject} />
+            {/* Holds the chart's space while its code downloads, so nothing jumps. */}
+            <Suspense fallback={<div className="chart-placeholder" aria-busy="true" />}>
+              <PortfolioChart history={portfolio} currency={loadedCurrency} subject={subject} />
+            </Suspense>
             <p className="chart-note">
               Values use the spot price. Dealers charge a premium above spot, so a new
               purchase usually starts out below what you paid.
