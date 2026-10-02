@@ -23,6 +23,22 @@ Run it whenever you like (once or twice a month is plenty); each run uses about 
 the metals.dev free plan's 100 monthly requests. If one source fails, the other is
 still updated. The commands below fetch a single source or a specific date range.
 
+### Automatic weekly updates (Windows)
+
+A scheduled task can run the update every Monday at 9:00 AM (or as soon as the computer
+is next on). Set it up once, from the project folder:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File backend\scripts\register_update_task.ps1
+```
+
+Each run's output is appended to `backend\logs\update_data.log`. To change the day or
+time, edit the trigger in `register_update_task.ps1` and run it again. To remove the task:
+
+```powershell
+Unregister-ScheduledTask -TaskName "Metals Tracker - update data" -Confirm:$false
+```
+
 ## Spot prices
 
 Daily prices come from metals.dev. Copy `.env.example` to `.env` and add your
