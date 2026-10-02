@@ -68,6 +68,13 @@ function App() {
   const [portfolioRefreshing, setPortfolioRefreshing] = useState(true)
   // Bumping this number makes the effects below fetch the data again.
   const [reloadCount, setReloadCount] = useState(0)
+  // True if the first load is taking a while, e.g. a free-plan server waking up.
+  const [slowStart, setSlowStart] = useState(false)
+
+  useEffect(() => {
+    const timer = setTimeout(() => setSlowStart(true), 4000)
+    return () => clearTimeout(timer)
+  }, [])
 
   // Ask the backend once whether this is the read-only demo.
   useEffect(() => {
@@ -222,7 +229,11 @@ function App() {
           <p className="form-error">{portfolioError}</p>
         ) : portfolio.length === 0 ? (
           <p className="empty">
-            {portfolioRefreshing ? 'Loading…' : 'Add a purchase to see your portfolio.'}
+            {!portfolioRefreshing
+              ? 'Add a purchase to see your portfolio.'
+              : slowStart
+                ? 'Starting the server… On free hosting this can take up to a minute after it has been idle.'
+                : 'Loading…'}
           </p>
         ) : (
           <>

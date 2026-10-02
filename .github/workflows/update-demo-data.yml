@@ -1,0 +1,27 @@
+# Keeps the public demo's prices and exchange rates up to date, once a day.
+# Needs two repository secrets (Settings > Secrets and variables > Actions):
+#   DEMO_DATABASE_URL   the Neon demo database, as postgresql+psycopg://...
+#   METALS_DEV_API_KEY  the metals.dev key (about 1 request per run)
+name: Update demo data
+
+on:
+  schedule:
+    - cron: "30 22 * * *" # 22:30 UTC, after the Bank of Canada publishes the day's rate
+  workflow_dispatch: # also allows running it by hand from the Actions tab
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+      - name: Install dependencies
+        run: uv sync --frozen --no-dev
+      - name: Update prices and exchange rates
+        env:
+          DATABASE_URL: ${{ secrets.DEMO_DATABASE_URL }}
+          METALS_DEV_API_KEY: ${{ secrets.METALS_DEV_API_KEY }}
+        run: uv run --no-sync python -m app.update_data
