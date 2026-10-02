@@ -22,8 +22,8 @@ def health_check() -> dict[str, str]:
 
 
 @app.get("/settings")
-def get_settings() -> dict[str, bool]:
-    """Settings the frontend needs, e.g. whether this is the read-only demo."""
+def get_settings() -> dict[str, str]:
+    """Settings the frontend needs: demo_mode is "off", "readonly" or "sandbox"."""
     return {"demo_mode": config.DEMO_MODE}
 
 

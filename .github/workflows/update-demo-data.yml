@@ -1,4 +1,5 @@
-# Keeps the public demo's prices and exchange rates up to date, once a day.
+# Once a day: updates the public demo's prices and exchange rates, then resets its
+# purchases to the samples (visitors can change them in sandbox mode).
 # Needs two repository secrets (Settings > Secrets and variables > Actions):
 #   DEMO_DATABASE_URL   the Neon demo database, as postgresql+psycopg://...
 #   METALS_DEV_API_KEY  the metals.dev key (about 1 request per run)
@@ -26,3 +27,9 @@ jobs:
           DATABASE_URL: ${{ secrets.DEMO_DATABASE_URL }}
           METALS_DEV_API_KEY: ${{ secrets.METALS_DEV_API_KEY }}
         run: uv run --no-sync python -m app.update_data
+      - name: Reset demo purchases to the samples
+        env:
+          DATABASE_URL: ${{ secrets.DEMO_DATABASE_URL }}
+          # The reset deletes all purchases, so it only runs when DEMO_MODE is set.
+          DEMO_MODE: sandbox
+        run: uv run --no-sync python -m app.reset_demo

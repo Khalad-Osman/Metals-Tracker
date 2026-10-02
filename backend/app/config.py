@@ -21,5 +21,22 @@ CORS_ORIGINS = [
     if origin.strip()
 ]
 
-# Public read-only demo: when true, purchases can't be added, edited or deleted.
-DEMO_MODE = os.getenv("DEMO_MODE", "").strip().lower() in ("1", "true", "yes")
+
+
+def parse_demo_mode(value: str) -> str:
+    """Turn the DEMO_MODE setting into "off", "readonly" or "sandbox".
+
+    off       the normal app (the default)
+    readonly  public demo: purchases can't be added, edited or deleted
+    sandbox   public demo: anyone can change purchases, within limits
+    "true" means readonly, and so does any unrecognised value, as the safe choice.
+    """
+    value = value.strip().lower()
+    if value in ("", "0", "false", "no", "off"):
+        return "off"
+    if value == "sandbox":
+        return "sandbox"
+    return "readonly"
+
+
+DEMO_MODE = parse_demo_mode(os.getenv("DEMO_MODE", ""))

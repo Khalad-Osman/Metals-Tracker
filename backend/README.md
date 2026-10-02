@@ -65,7 +65,7 @@ All settings are environment variables, read from `backend/.env` when it exists.
 | `DATABASE_URL` | Database to use | SQLite file `backend/metals.db` |
 | `METALS_DEV_API_KEY` | metals.dev API key, for spot prices | none (price updates fail without it) |
 | `CORS_ORIGINS` | Websites allowed to call the API from a browser, comma-separated | `http://localhost:5173` |
-| `DEMO_MODE` | `true` makes purchases read-only, for a public demo | off |
+| `DEMO_MODE` | Public demo: `readonly` (purchases can't change) or `sandbox` (anyone can change them, within limits). `true` means `readonly`. | off |
 
 ## Public demo
 
@@ -77,8 +77,18 @@ uv run python -m app.seed_demo       # market data + three sample purchases (abo
 ```
 
 `seed_demo` refuses to run if the database already has purchases. Then run the API with
-`DEMO_MODE=true` and `CORS_ORIGINS` set to the frontend's address, and build the frontend
-with `VITE_API_URL` set to the API's address.
+`DEMO_MODE` set to `readonly` or `sandbox` and `CORS_ORIGINS` set to the frontend's
+address, and build the frontend with `VITE_API_URL` set to the API's address.
+
+In **sandbox** mode, visitors share one portfolio, with limits: up to 100 kg per purchase,
+prices up to 1,000,000, at most 50 purchases, and only dates the demo has prices for.
+To put the sample purchases back (it runs nightly on the live demo):
+
+```powershell
+uv run python -m app.reset_demo      # deletes ALL purchases, then re-adds the samples
+```
+
+`reset_demo` refuses to run unless `DEMO_MODE` is set, so it can't wipe a real portfolio.
 
 ## Updating market data
 
