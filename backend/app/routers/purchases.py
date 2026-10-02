@@ -1,11 +1,21 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 
+from app import config
 from app.database import get_session
 from app.models import Purchase
 from app.schemas import PurchaseInput, PurchaseRead
 
 router = APIRouter(prefix="/purchases", tags=["purchases"])
+
+
+def block_in_demo_mode() -> None:
+    """Refuse changes when this is the public read-only demo."""
+    # Read at request time (not import time), so tests can switch demo mode on.
+    if config.DEMO_MODE:
+        raise HTTPException(
+            status_code=403, detail="This is a read-only demo; purchases can't be changed."
+        )
 
 
 def get_purchase_or_404(purchase_id: int, session: Session) -> Purchase:
@@ -15,7 +25,9 @@ def get_purchase_or_404(purchase_id: int, session: Session) -> Purchase:
     return purchase
 
 
-@router.post("", response_model=PurchaseRead, status_code=201)
+@router.post(
+    "", response_model=PurchaseRead, status_code=201, dependencies=[Depends(block_in_demo_mode)]
+)
 def create_purchase(entry: PurchaseInput, session: Session = Depends(get_session)):
     purchase = Purchase.from_entry(**entry.model_dump())
     session.add(purchase)
@@ -33,7 +45,9 @@ def list_purchases(session: Session = Depends(get_session)):
     return session.exec(statement).all()
 
 
-@router.put("/{purchase_id}", response_model=PurchaseRead)
+@router.put(
+    "/{purchase_id}", response_model=PurchaseRead, dependencies=[Depends(block_in_demo_mode)]
+)
 def update_purchase(
     purchase_id: int, entry: PurchaseInput, session: Session = Depends(get_session)
 ):
@@ -51,7 +65,9 @@ def update_purchase(
     return purchase
 
 
-@router.delete("/{purchase_id}", status_code=204)
+@router.delete(
+    "/{purchase_id}", status_code=204, dependencies=[Depends(block_in_demo_mode)]
+)
 def delete_purchase(purchase_id: int, session: Session = Depends(get_session)):
     purchase = get_purchase_or_404(purchase_id, session)
     session.delete(purchase)

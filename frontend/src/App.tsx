@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
-import { deletePurchase, getHoldings, getPortfolioHistory, listPurchases } from './api'
+import { deletePurchase, getHoldings, getPortfolioHistory, getSettings, listPurchases } from './api'
 import type { Currency, Holding, Metal, PortfolioDay, Purchase } from './api'
 import { METAL_LABELS, UNIT_LABELS, formatDate } from './format'
 import HoldingsTable from './components/HoldingsTable'
@@ -51,6 +51,8 @@ function App() {
   const [error, setError] = useState<string | null>(null)
   // The purchase being edited in the form, if any.
   const [editing, setEditing] = useState<Purchase | undefined>()
+  // In the public demo, purchases are read-only.
+  const [demoMode, setDemoMode] = useState(false)
 
   // What the user picked, and what the loaded data is actually for. They differ
   // briefly while new data loads, so the old numbers keep their correct labels.
@@ -66,6 +68,15 @@ function App() {
   const [portfolioRefreshing, setPortfolioRefreshing] = useState(true)
   // Bumping this number makes the effects below fetch the data again.
   const [reloadCount, setReloadCount] = useState(0)
+
+  // Ask the backend once whether this is the read-only demo.
+  useEffect(() => {
+    getSettings()
+      .then((settings) => setDemoMode(settings.demo_mode))
+      .catch(() => {
+        // If settings can't load, the other requests will show the error.
+      })
+  }, [])
 
   // Load the purchase history when the page opens, and again after each change.
   useEffect(() => {
@@ -187,6 +198,14 @@ function App() {
         />
       </header>
 
+      {demoMode && (
+        <p className="demo-banner" role="note">
+          <strong>Demo</strong> with sample purchases and real market prices. Adding and
+          editing purchases are turned off.{' '}
+          <a href="https://github.com/Khalad-Osman/Metals-Tracker">View the code on GitHub</a>
+        </p>
+      )}
+
       <section className={portfolioRefreshing ? 'portfolio refreshing' : 'portfolio'}>
         <div className="section-header">
           <h2>Portfolio</h2>
@@ -227,13 +246,15 @@ function App() {
         </section>
       )}
 
-      <PurchaseForm
-        // A new key resets the form whenever we switch between adding and editing.
-        key={editing?.id ?? 'new'}
-        editing={editing}
-        onSaved={handleSaved}
-        onCancelEdit={() => setEditing(undefined)}
-      />
+      {!demoMode && (
+        <PurchaseForm
+          // A new key resets the form whenever we switch between adding and editing.
+          key={editing?.id ?? 'new'}
+          editing={editing}
+          onSaved={handleSaved}
+          onCancelEdit={() => setEditing(undefined)}
+        />
+      )}
 
       <section>
         <h2>Purchase history</h2>
@@ -245,8 +266,9 @@ function App() {
           <PurchaseTable
             purchases={purchases}
             editingId={editing?.id}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
+            // Without these the table is read-only, as in the demo.
+            onEdit={demoMode ? undefined : handleEdit}
+            onDelete={demoMode ? undefined : handleDelete}
           />
         )}
       </section>
