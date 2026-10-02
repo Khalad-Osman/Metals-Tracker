@@ -14,8 +14,10 @@ services:
     envVars:
       - key: PYTHON_VERSION
         value: "3.12.11"
+      # sandbox: visitors can try adding and editing purchases (within limits,
+      # reset nightly). Use readonly to turn editing off.
       - key: DEMO_MODE
-        value: "true"
+        value: sandbox
       # The Neon demo database (never the real one), as postgresql+psycopg://...
       - key: DATABASE_URL
         sync: false
