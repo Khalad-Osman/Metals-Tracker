@@ -1,10 +1,14 @@
 # Metals Tracker
 
-[![CI](https://github.com/khalad-osman/Metals-Tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/khalad-osman/Metals-Tracker/actions/workflows/ci.yml)
+[![CI](https://github.com/Khalad-Osman/Metals-Tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/Khalad-Osman/Metals-Tracker/actions/workflows/ci.yml)
 
 A portfolio tracker for physical precious metals. Log purchases of gold, silver,
 platinum and palladium, and see what your holdings are worth over time in Canadian
 or US dollars, using daily spot prices and Bank of Canada exchange rates.
+
+**[Live demo](https://metals-tracker.khaladosman213.workers.dev)**: read-only, with sample
+purchases and real market prices. It runs on free hosting, so if nobody has visited for a
+while, the first load can take up to a minute while the server starts.
 
 ![Portfolio view in light mode, showing all metals](docs/screenshots/portfolio-light.png)
 
@@ -38,6 +42,7 @@ or US dollars, using daily spot prices and Bank of Canada exchange rates.
 | Frontend | React 19, TypeScript, Vite, Recharts |
 | Data | [metals.dev](https://metals.dev) (spot prices), [Bank of Canada Valet API](https://www.bankofcanada.ca/valet/docs) (USD/CAD) |
 | Tooling | uv, npm, pytest, oxlint, GitHub Actions |
+| Demo hosting | Cloudflare Workers (frontend), Render (API), Neon (PostgreSQL), all on free plans |
 
 ## Architecture
 
@@ -49,6 +54,9 @@ flowchart LR
     Update -->|spot prices| Metals["metals.dev"]
     Update -->|USD/CAD rates| BoC["Bank of Canada"]
 ```
+
+The public demo runs the same code with `DEMO_MODE` on (purchases are read-only) and its
+own database, which a scheduled GitHub Actions workflow updates with market data daily.
 
 The backend stores three kinds of data: **purchases** (in their original currency and
 unit), **daily spot prices** (USD per troy ounce, one row per metal per day), and
