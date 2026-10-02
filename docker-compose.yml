@@ -1,0 +1,22 @@
+# Local PostgreSQL for development. Start it with:  docker compose up -d
+# The password comes from the .env file next to this one (copy .env.example to .env).
+services:
+  db:
+    image: postgres:17
+    restart: unless-stopped # starts again automatically whenever Docker starts
+    environment:
+      POSTGRES_USER: metals
+      POSTGRES_DB: metals
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in the .env file next to docker-compose.yml}
+    ports:
+      - "127.0.0.1:5432:5432" # reachable from this computer only, not the network
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U metals -d metals"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-data:

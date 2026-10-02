@@ -11,6 +11,51 @@ uv run pytest                             # run the tests
 
 Interactive API docs: http://localhost:8000/docs
 
+## Database
+
+The app uses whatever `DATABASE_URL` is set to in `backend/.env`. Without it, it falls
+back to a SQLite file (`backend/metals.db`), which is handy for a quick start.
+
+### PostgreSQL (recommended, and what deployment uses)
+
+PostgreSQL runs in Docker. From the project folder (one level up from `backend`):
+
+```powershell
+copy .env.example .env      # then set POSTGRES_PASSWORD in .env
+docker compose up -d        # start PostgreSQL 17 on 127.0.0.1:5432
+```
+
+Then add this line to `backend/.env`, using the same password, and create the tables:
+
+```
+DATABASE_URL=postgresql+psycopg://metals:<password>@127.0.0.1:5432/metals
+```
+
+```powershell
+uv run alembic upgrade head
+```
+
+Docker Desktop must be running whenever the app or the weekly update runs. The database
+container starts again automatically with Docker; to start Docker itself when you sign
+in, turn on "Start Docker Desktop when you sign in" in its settings.
+
+To copy existing data from SQLite into an empty PostgreSQL database (after creating its tables):
+
+```powershell
+uv run python -m app.copy_database --source sqlite:///metals.db
+```
+
+### Running the tests against PostgreSQL
+
+Tests use an in-memory SQLite database by default. To run them against PostgreSQL, point
+`TEST_DATABASE_URL` at an empty database used only for tests (never the real one):
+
+```powershell
+docker compose exec db psql -U metals -c "CREATE DATABASE metals_test;"   # once
+$env:TEST_DATABASE_URL = "postgresql+psycopg://metals:<password>@127.0.0.1:5432/metals_test"
+uv run pytest
+```
+
 ## Updating market data
 
 One command brings exchange rates and spot prices up to date:
