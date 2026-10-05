@@ -1,4 +1,4 @@
-# Metals Tracker – Frontend
+# Troy Ledger – Frontend
 
 React + TypeScript app built with Vite. Run these from the `frontend` folder in PowerShell:
 

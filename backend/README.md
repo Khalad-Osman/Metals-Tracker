@@ -1,4 +1,4 @@
-# Metals Tracker – Backend
+# Troy Ledger – Backend
 
 FastAPI app. Run these from the `backend` folder in PowerShell:
 

@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app import config
 from app.routers import exchange_rates, portfolio, prices, purchases
 
-app = FastAPI(title="Metals Tracker API")
+app = FastAPI(title="Troy Ledger API")
 
 # Allow the frontend to call this API from the browser.
 app.add_middleware(

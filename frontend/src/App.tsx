@@ -198,7 +198,10 @@ function App() {
   return (
     <main>
       <header className="page-header">
-        <h1>Metals Tracker</h1>
+        <div className="brand">
+          <h1>Troy Ledger</h1>
+          <p className="tagline">Precious metals portfolio tracker</p>
+        </div>
         <Toggle
           label="Display currency"
           options={[

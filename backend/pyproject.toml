@@ -1,5 +1,5 @@
 [project]
-name = "metals-tracker-backend"
+name = "troy-ledger-backend"
 version = "0.1.0"
 description = "FastAPI backend for the Metals Investment Tracker"
 readme = "README.md"

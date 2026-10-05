@@ -1,10 +1,11 @@
-# Metals Tracker
+# Troy Ledger
 
 [![CI](https://github.com/Khalad-Osman/Metals-Tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/Khalad-Osman/Metals-Tracker/actions/workflows/ci.yml)
 
 A portfolio tracker for physical precious metals. Log purchases of gold, silver,
 platinum and palladium, and see what your holdings are worth over time in Canadian
-or US dollars, using daily spot prices and Bank of Canada exchange rates.
+or US dollars, using daily spot prices and Bank of Canada exchange rates. It's named
+after the troy ounce, the unit precious metals are priced in.
 
 **[Live demo](https://metals-tracker.khaladosman213.workers.dev)**: try adding or editing a
 purchase. It starts with sample purchases and real market prices, is shared by all
@@ -97,7 +98,7 @@ without a migration. Testing on PostgreSQL found that undoing a migration left e
 types behind, which only shows up on PostgreSQL; a test now undoes and redoes every
 migration.
 
-**Tests run against both SQLite and PostgreSQL.** The suite (128 tests) uses an
+**Tests run against both SQLite and PostgreSQL.** The suite (155 tests) uses an
 in-memory SQLite database by default, and runs against PostgreSQL when
 `TEST_DATABASE_URL` is set. CI runs both. External APIs are replaced by fake HTTP
 transports in tests, so tests never use real API quota.
@@ -139,7 +140,7 @@ optional for a quick try. More detail is in [backend/README.md](backend/README.m
 
 ```powershell
 cd backend
-uv run pytest                          # 128 tests on in-memory SQLite
+uv run pytest                          # 155 tests on in-memory SQLite
 
 cd frontend
 npm run lint
