@@ -5,6 +5,7 @@ import { CHART_RANGES } from './chartRange'
 import type { ChartRange } from './chartRange'
 import { METAL_LABELS, UNIT_LABELS, formatDate } from './format'
 import HoldingsTable from './components/HoldingsTable'
+import MetalName from './components/MetalName'
 import PortfolioSummary from './components/PortfolioSummary'
 import PurchaseForm from './components/PurchaseForm'
 import PurchaseTable from './components/PurchaseTable'
@@ -206,7 +207,7 @@ function App() {
     { value: 'all' as MetalFilter, label: 'All' },
     ...holdings.map((holding) => ({
       value: holding.metal as MetalFilter,
-      label: METAL_LABELS[holding.metal],
+      label: <MetalName metal={holding.metal} />,
     })),
   ]
   // What the summary and chart describe, e.g. "Portfolio" or "Gold".
@@ -216,7 +217,10 @@ function App() {
     <main>
       <header className="page-header">
         <div className="brand">
-          <h1>Troy Ledger</h1>
+          <h1>
+            <img className="logo" src="/favicon.svg" alt="" width="32" height="32" />
+            Troy Ledger
+          </h1>
           <p className="tagline">Precious metals portfolio tracker</p>
         </div>
         <Toggle

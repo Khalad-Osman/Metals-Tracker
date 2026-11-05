@@ -23,13 +23,20 @@
 
   /* Charts (validated palette: blue for the value, gray for context) */
   --chart-value: #2a78d6;
-  --chart-track: #cde2fb;
   --chart-cost: #898781;
   --chart-grid: #e1e0d9;
   --chart-axis: #c3c2b7;
   --chart-muted: #59636e; /* axis labels: same as --muted, 6.1:1 on white */
   --gain-text: #006300;
   --loss-text: #d03b3b;
+
+  /* One color per metal. Checked with a palette validator for color-blind
+     separation: every pair passes, since any two can sit side by side in the
+     allocation bar. Metal names are always shown next to them too. */
+  --metal-gold: #eda100;
+  --metal-silver: #6250d6;
+  --metal-platinum: #e87ba4;
+  --metal-palladium: #008300;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -53,13 +60,18 @@
 
     /* The chart palette's dark-mode steps, validated against the dark surface. */
     --chart-value: #3987e5;
-    --chart-track: #184f95;
     --chart-cost: #898781;
     --chart-grid: #2c2c2a;
     --chart-axis: #383835;
     --chart-muted: #a8a79f;
     --gain-text: #3fb950;
     --loss-text: #ff7b72;
+
+    /* The same four hues, stepped for the dark surface and validated there. */
+    --metal-gold: #c98500;
+    --metal-silver: #9085e9;
+    --metal-platinum: #d55181;
+    --metal-palladium: #008300;
   }
 }
 
@@ -478,6 +490,11 @@ td.actions {
   color: var(--on-accent);
 }
 
+/* A white ring, so a gold dot still shows on the gold "selected" fill. */
+.toggle button[aria-pressed='true'] .metal-dot {
+  box-shadow: 0 0 0 1.5px var(--on-accent);
+}
+
 .toggle button:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: -2px;
@@ -489,33 +506,43 @@ td.actions {
   color: var(--muted);
 }
 
-.share {
-  display: flex;
+.metal-name {
+  display: inline-flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.4rem;
 }
 
-.share-value {
-  min-width: 3.5rem;
-  text-align: right;
-  font-variant-numeric: tabular-nums;
+/* A metal's color dot, with a thin ring so it stays visible on any background. */
+.metal-dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  box-shadow: 0 0 0 1px var(--surface);
 }
 
-/* A thin meter: blue fill on a lighter step of the same blue. */
-.share-track {
-  display: inline-block;
-  width: 80px;
-  height: 6px;
-  border-radius: 3px;
-  background: var(--chart-track);
-  overflow: hidden;
+.gold { --metal: var(--metal-gold); }
+.silver { --metal: var(--metal-silver); }
+.platinum { --metal: var(--metal-platinum); }
+.palladium { --metal: var(--metal-palladium); }
+
+.metal-dot,
+.allocation-part {
+  background: var(--metal);
 }
 
-.share-fill {
-  display: block;
-  height: 100%;
-  border-radius: 3px;
-  background: var(--chart-value);
+/* One bar split by metal; 2px gaps keep neighboring colors apart. */
+.allocation-bar {
+  display: flex;
+  gap: 2px;
+  height: 12px;
+  margin-bottom: 1rem;
+}
+
+.allocation-part {
+  flex-basis: 0;
+  min-width: 4px;
+  border-radius: 4px;
 }
 
 /* --- Page header: title on the left, display currency on the right --- */
@@ -531,6 +558,14 @@ td.actions {
 .page-header h1 {
   margin: 0;
   line-height: 1.1;
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.logo {
+  width: 1.1em;
+  height: 1.1em;
 }
 
 .tagline {

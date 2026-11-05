@@ -1,5 +1,6 @@
 import type { Purchase } from '../api'
-import { METAL_LABELS, UNIT_LABELS, formatDate, formatMoney, formatOunces } from '../format'
+import { UNIT_LABELS, formatDate, formatMoney, formatOunces } from '../format'
+import MetalName from './MetalName'
 
 type Props = {
   purchases: Purchase[]
@@ -37,7 +38,9 @@ export default function PurchaseTable({ purchases, editingId, onEdit, onDelete }
           {purchases.map((purchase) => (
             <tr key={purchase.id} className={purchase.id === editingId ? 'editing' : undefined}>
               <td>{formatDate(purchase.purchase_date)}</td>
-              <td>{METAL_LABELS[purchase.metal]}</td>
+              <td>
+                <MetalName metal={purchase.metal} />
+              </td>
               <td className="number">
                 {purchase.original_weight} {UNIT_LABELS[purchase.original_unit]}
               </td>

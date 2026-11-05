@@ -1,6 +1,8 @@
+import type { ReactNode } from 'react'
+
 type Option<T extends string> = {
   value: T
-  label: string
+  label: ReactNode
 }
 
 type Props<T extends string> = {
