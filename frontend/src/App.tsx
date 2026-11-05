@@ -1,6 +1,8 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
 import { ApiError, deletePurchase, getDemoMode, getHoldings, getPortfolioHistory, listPurchases } from './api'
 import type { Currency, DemoMode, Holding, Metal, PortfolioDay, Purchase } from './api'
+import { CHART_RANGES } from './chartRange'
+import type { ChartRange } from './chartRange'
 import { METAL_LABELS, UNIT_LABELS, formatDate } from './format'
 import HoldingsTable from './components/HoldingsTable'
 import PortfolioSummary from './components/PortfolioSummary'
@@ -17,6 +19,7 @@ type MetalFilter = Metal | 'all'
 
 const CURRENCY_STORAGE_KEY = 'displayCurrency'
 const METAL_FILTER_STORAGE_KEY = 'portfolioMetal'
+const CHART_RANGE_STORAGE_KEY = 'chartRange'
 
 // Choices are remembered in this browser. Storage can be unavailable (e.g. in
 // some private windows); then the defaults are used and nothing is remembered.
@@ -45,6 +48,11 @@ function savedMetalFilter(): MetalFilter {
   return saved && Object.hasOwn(METAL_LABELS, saved) ? (saved as Metal) : 'all'
 }
 
+function savedChartRange(): ChartRange {
+  const saved = loadSetting(CHART_RANGE_STORAGE_KEY)
+  return CHART_RANGES.find((option) => option.value === saved)?.value ?? 'all'
+}
+
 function App() {
   const [purchases, setPurchases] = useState<Purchase[]>([])
   const [loading, setLoading] = useState(true)
@@ -61,6 +69,8 @@ function App() {
   const [metalFilter, setMetalFilter] = useState<MetalFilter>(savedMetalFilter)
   const [loadedCurrency, setLoadedCurrency] = useState<Currency>(currency)
   const [loadedMetal, setLoadedMetal] = useState<MetalFilter>('all')
+  // How much history the chart shows. Changing it doesn't reload anything.
+  const [chartRange, setChartRange] = useState<ChartRange>(savedChartRange)
 
   const [portfolio, setPortfolio] = useState<PortfolioDay[]>([])
   const [holdings, setHoldings] = useState<Holding[]>([])
@@ -149,6 +159,11 @@ function App() {
     setPortfolioRefreshing(true)
     setMetalFilter(newFilter)
     saveSetting(METAL_FILTER_STORAGE_KEY, newFilter)
+  }
+
+  function handleChartRangeChange(newRange: ChartRange) {
+    setChartRange(newRange)
+    saveSetting(CHART_RANGE_STORAGE_KEY, newRange)
   }
 
   function handleSaved() {
@@ -250,7 +265,13 @@ function App() {
             <PortfolioSummary history={portfolio} currency={loadedCurrency} subject={subject} />
             {/* Holds the chart's space while its code downloads, so nothing jumps. */}
             <Suspense fallback={<div className="chart-placeholder" aria-busy="true" />}>
-              <PortfolioChart history={portfolio} currency={loadedCurrency} subject={subject} />
+              <PortfolioChart
+                history={portfolio}
+                currency={loadedCurrency}
+                subject={subject}
+                range={chartRange}
+                onRangeChange={handleChartRangeChange}
+              />
             </Suspense>
             <p className="chart-note">
               Values use the spot price. Dealers charge a premium above spot, so a new

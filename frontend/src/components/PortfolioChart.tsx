@@ -10,6 +10,9 @@ import {
 } from 'recharts'
 import type { TooltipContentProps } from 'recharts'
 import type { Currency, PortfolioDay } from '../api'
+import { CHART_RANGES, availableRanges, rangeStart } from '../chartRange'
+import type { ChartRange } from '../chartRange'
+import Toggle from './Toggle'
 import {
   formatAxisMoney,
   formatDate,
@@ -24,6 +27,9 @@ type Props = {
   currency: Currency
   // What the chart shows, e.g. "Portfolio" or "Gold".
   subject: string
+  // The time range the user picked, and how to change it.
+  range: ChartRange
+  onRangeChange: (range: ChartRange) => void
 }
 
 // One point on the chart. Numbers are only for drawing; the exact strings
@@ -35,10 +41,23 @@ type ChartRow = {
   day: PortfolioDay
 }
 
-export default function PortfolioChart({ history, currency, subject }: Props) {
+export default function PortfolioChart({
+  history,
+  currency,
+  subject,
+  range,
+  onRangeChange,
+}: Props) {
   const [showTable, setShowTable] = useState(false)
 
-  const rows: ChartRow[] = history.map((day) => ({
+  // Only offer ranges shorter than the history. If the saved range isn't one of
+  // them (e.g. 1Y for a portfolio started last month), show everything.
+  const offered = availableRanges(history.map((day) => day.date))
+  const shownRange = offered.includes(range) ? range : 'all'
+  const start = history.length > 0 ? rangeStart(shownRange, history[history.length - 1].date) : null
+  const shown = start === null ? history : history.filter((day) => day.date >= start)
+
+  const rows: ChartRow[] = shown.map((day) => ({
     date: day.date,
     value: day.value === null ? null : Number(day.value),
     cost: day.cost === null ? null : Number(day.cost),
@@ -55,13 +74,23 @@ export default function PortfolioChart({ history, currency, subject }: Props) {
             Daily value at spot price, compared with what you paid ({currency})
           </span>
         </figcaption>
-        <button type="button" className="secondary" onClick={() => setShowTable(!showTable)}>
-          {showTable ? 'Show chart' : 'Show table'}
-        </button>
+        <div className="chart-controls">
+          {offered.length > 1 && (
+            <Toggle
+              label="Time range"
+              options={CHART_RANGES.filter((option) => offered.includes(option.value))}
+              value={shownRange}
+              onChange={onRangeChange}
+            />
+          )}
+          <button type="button" className="secondary" onClick={() => setShowTable(!showTable)}>
+            {showTable ? 'Show chart' : 'Show table'}
+          </button>
+        </div>
       </div>
 
       {showTable ? (
-        <HistoryTable history={history} currency={currency} />
+        <HistoryTable history={shown} currency={currency} />
       ) : (
         <>
           <ul className="legend">
@@ -139,8 +168,13 @@ function roundTicks(amounts: (number | null)[]): number[] {
   if (known.length === 0) {
     return [0, 1]
   }
-  const low = Math.min(...known)
-  const high = Math.max(...known)
+  // Pad by 5% of the spread, so neither line runs along the top or bottom edge.
+  // (Never below zero when the data isn't.)
+  const smallest = Math.min(...known)
+  const largest = Math.max(...known)
+  const pad = (largest - smallest) * 0.05
+  const low = smallest >= 0 ? Math.max(smallest - pad, 0) : smallest - pad
+  const high = largest + pad
 
   // Aim for about 4 steps, using a step size of 1, 2, 2.5 or 5 times a power of ten.
   const roughStep = Math.max(high - low, 1) / 4
@@ -206,7 +240,7 @@ function TooltipRow({
 }
 
 // The same data as the chart, readable without hovering. Newest first.
-function HistoryTable({ history, currency }: Omit<Props, 'subject'>) {
+function HistoryTable({ history, currency }: { history: PortfolioDay[]; currency: Currency }) {
   const show = (amount: string | null) => (amount === null ? '—' : formatMoney(amount, currency))
 
   return (

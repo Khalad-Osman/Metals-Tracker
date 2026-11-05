@@ -346,6 +346,18 @@ td.actions {
   margin: 0.75rem 0 0;
 }
 
+.chart-header {
+  flex-wrap: wrap; /* on narrow screens the controls drop below the title */
+}
+
+/* Time range buttons and the chart/table switch, side by side. */
+.chart-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 .chart-header button {
   flex-shrink: 0;
   font-size: 0.875rem;
