@@ -6,11 +6,16 @@ type Props = {
   currency: Currency
   // What the figures describe, e.g. "Portfolio" or "Gold".
   subject: string
+  // The day under the pointer on the chart, if any.
+  hoveredDay?: PortfolioDay | null
 }
 
-// Headline figures for the most recent day that has a known value.
-export default function PortfolioSummary({ history, currency, subject }: Props) {
-  const latest = history.findLast((day) => day.value !== null)
+// Headline figures for the day being hovered on the chart, or otherwise the most
+// recent day that has a known value.
+export default function PortfolioSummary({ history, currency, subject, hoveredDay }: Props) {
+  // Ignore a hovered day that's out of date (from before the data reloaded) or unknown.
+  const useHovered = hoveredDay && hoveredDay.value !== null && history.includes(hoveredDay)
+  const latest = useHovered ? hoveredDay : history.findLast((day) => day.value !== null)
   if (!latest || latest.value === null || latest.cost === null || latest.gain === null) {
     return null
   }

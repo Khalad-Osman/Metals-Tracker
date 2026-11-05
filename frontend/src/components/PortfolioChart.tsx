@@ -30,6 +30,8 @@ type Props = {
   // The time range the user picked, and how to change it.
   range: ChartRange
   onRangeChange: (range: ChartRange) => void
+  // Called with the day under the pointer, and with null when it leaves the chart.
+  onHoverDay: (day: PortfolioDay | null) => void
 }
 
 // One point on the chart. Numbers are only for drawing; the exact strings
@@ -47,6 +49,7 @@ export default function PortfolioChart({
   subject,
   range,
   onRangeChange,
+  onHoverDay,
 }: Props) {
   const [showTable, setShowTable] = useState(false)
 
@@ -103,7 +106,15 @@ export default function PortfolioChart({
           </ul>
           <div className="chart-area">
             <ResponsiveContainer width="100%" height={320}>
-              <LineChart data={rows} margin={{ top: 8, right: 16, bottom: 0, left: 8 }}>
+              <LineChart
+                data={rows}
+                margin={{ top: 8, right: 16, bottom: 0, left: 8 }}
+                // The headline figures above follow the pointer (activeLabel is the date).
+                onMouseMove={(state) =>
+                  onHoverDay(shown.find((day) => day.date === state.activeLabel) ?? null)
+                }
+                onMouseLeave={() => onHoverDay(null)}
+              >
                 <CartesianGrid vertical={false} stroke="var(--chart-grid)" />
                 <XAxis
                   dataKey="date"
@@ -125,7 +136,7 @@ export default function PortfolioChart({
                 />
                 <Tooltip
                   cursor={{ stroke: 'var(--chart-axis)', strokeWidth: 1 }}
-                  content={(props) => <ChartTooltip {...props} currency={currency} />}
+                  content={(props) => <ChartTooltip {...props} />}
                 />
                 {/* Cost only changes on purchase days, so it's drawn as steps. */}
                 <Line
@@ -191,11 +202,8 @@ function roundTicks(amounts: (number | null)[]): number[] {
   return ticks
 }
 
-function ChartTooltip({
-  active,
-  payload,
-  currency,
-}: TooltipContentProps & { currency: Currency }) {
+// Just the date: the headline figures above show that day's numbers.
+function ChartTooltip({ active, payload }: TooltipContentProps) {
   if (!active || !payload || payload.length === 0) {
     return null
   }
@@ -204,38 +212,9 @@ function ChartTooltip({
   return (
     <div className="chart-tooltip">
       <p className="tooltip-date">{formatDate(day.date)}</p>
-      <TooltipRow keyClass="value" label="Market value" amount={day.value} currency={currency} />
-      <TooltipRow keyClass="cost" label="Cost" amount={day.cost} currency={currency} />
-      {day.gain !== null && (
-        <p className="tooltip-row">
-          <strong>
-            {formatSignedMoney(day.gain, currency)}
-            {day.gain_percent !== null && ` (${formatSignedPercent(day.gain_percent)})`}
-          </strong>{' '}
-          <span>gain / loss</span>
-        </p>
-      )}
+      {/* The headline keeps showing the latest figures on these days. */}
+      {day.value === null && <p className="tooltip-row">Value unknown (no price that day)</p>}
     </div>
-  )
-}
-
-function TooltipRow({
-  keyClass,
-  label,
-  amount,
-  currency,
-}: {
-  keyClass: string
-  label: string
-  amount: string | null
-  currency: Currency
-}) {
-  return (
-    <p className="tooltip-row">
-      <span className={`legend-key ${keyClass}`} aria-hidden="true" />
-      <strong>{amount === null ? 'unknown' : formatMoney(amount, currency)}</strong>{' '}
-      <span>{label}</span>
-    </p>
   )
 }
 

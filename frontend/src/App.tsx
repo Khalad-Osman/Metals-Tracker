@@ -71,6 +71,8 @@ function App() {
   const [loadedMetal, setLoadedMetal] = useState<MetalFilter>('all')
   // How much history the chart shows. Changing it doesn't reload anything.
   const [chartRange, setChartRange] = useState<ChartRange>(savedChartRange)
+  // The day under the pointer on the chart; the summary figures show it.
+  const [hoveredDay, setHoveredDay] = useState<PortfolioDay | null>(null)
 
   const [portfolio, setPortfolio] = useState<PortfolioDay[]>([])
   const [holdings, setHoldings] = useState<Holding[]>([])
@@ -262,7 +264,12 @@ function App() {
           </p>
         ) : (
           <>
-            <PortfolioSummary history={portfolio} currency={loadedCurrency} subject={subject} />
+            <PortfolioSummary
+              history={portfolio}
+              currency={loadedCurrency}
+              subject={subject}
+              hoveredDay={hoveredDay}
+            />
             {/* Holds the chart's space while its code downloads, so nothing jumps. */}
             <Suspense fallback={<div className="chart-placeholder" aria-busy="true" />}>
               <PortfolioChart
@@ -271,6 +278,7 @@ function App() {
                 subject={subject}
                 range={chartRange}
                 onRangeChange={handleChartRangeChange}
+                onHoverDay={setHoveredDay}
               />
             </Suspense>
             <p className="chart-note">

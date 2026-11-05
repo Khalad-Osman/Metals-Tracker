@@ -410,6 +410,9 @@ td.actions {
 
 .tooltip-date {
   color: var(--muted);
+}
+
+.tooltip-date:not(:last-child) {
   margin-bottom: 0.25rem !important;
 }
 
