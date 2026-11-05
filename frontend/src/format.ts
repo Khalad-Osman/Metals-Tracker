@@ -19,8 +19,14 @@ export function formatMoney(amount: string, currency: Currency): string {
   )
 }
 
+// Always three decimals, e.g. "1.000 oz" and "16.075 oz", so columns line up.
+// (One gram is 0.032 oz, so small amounts still show.)
 export function formatOunces(ounces: string): string {
-  return `${Number(ounces).toLocaleString('en-CA', { maximumFractionDigits: 4 })} oz`
+  const formatted = Number(ounces).toLocaleString('en-CA', {
+    minimumFractionDigits: 3,
+    maximumFractionDigits: 3,
+  })
+  return `${formatted} oz`
 }
 
 export function formatDate(isoDate: string): string {

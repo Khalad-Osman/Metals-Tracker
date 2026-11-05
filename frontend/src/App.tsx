@@ -33,6 +33,10 @@ type MetalFilter = Metal | 'all'
 const CURRENCY_STORAGE_KEY = 'displayCurrency'
 const METAL_FILTER_STORAGE_KEY = 'portfolioMetal'
 const CHART_RANGE_STORAGE_KEY = 'chartRange'
+// Also read by the script in index.html, which applies it before the page draws.
+const THEME_STORAGE_KEY = 'theme'
+
+type Theme = 'system' | 'light' | 'dark'
 
 // Choices are remembered in this browser. Storage can be unavailable (e.g. in
 // some private windows); then the defaults are used and nothing is remembered.
@@ -61,6 +65,11 @@ function savedMetalFilter(): MetalFilter {
   return saved && Object.hasOwn(METAL_LABELS, saved) ? (saved as Metal) : 'all'
 }
 
+function savedTheme(): Theme {
+  const saved = loadSetting(THEME_STORAGE_KEY)
+  return saved === 'light' || saved === 'dark' ? saved : 'system'
+}
+
 function savedChartRange(): ChartRange {
   const saved = loadSetting(CHART_RANGE_STORAGE_KEY)
   return CHART_RANGES.find((option) => option.value === saved)?.value ?? 'all'
@@ -87,6 +96,7 @@ function App() {
   const [loadedMetal, setLoadedMetal] = useState<MetalFilter>('all')
   // How much history the chart shows. Changing it doesn't reload anything.
   const [chartRange, setChartRange] = useState<ChartRange>(savedChartRange)
+  const [theme, setTheme] = useState<Theme>(savedTheme)
   // The day under the pointer on the chart; the summary figures show it.
   const [hoveredDay, setHoveredDay] = useState<PortfolioDay | null>(null)
 
@@ -184,6 +194,17 @@ function App() {
     setPortfolioRefreshing(true)
     setMetalFilter(newFilter)
     saveSetting(METAL_FILTER_STORAGE_KEY, newFilter)
+  }
+
+  function handleThemeChange(newTheme: Theme) {
+    setTheme(newTheme)
+    saveSetting(THEME_STORAGE_KEY, newTheme)
+    // The colors in index.css switch on this attribute; without it they follow the system.
+    if (newTheme === 'system') {
+      delete document.documentElement.dataset.theme
+    } else {
+      document.documentElement.dataset.theme = newTheme
+    }
   }
 
   function handleChartRangeChange(newRange: ChartRange) {
@@ -294,14 +315,18 @@ function App() {
         </div>
         {portfolioError ? (
           <p className="form-error">{portfolioError}</p>
+        ) : portfolio.length === 0 && portfolioRefreshing ? (
+          <>
+            <PortfolioSkeleton />
+            {slowStart && (
+              <p className="empty">
+                Starting the server… On free hosting this can take up to a minute after it has
+                been idle.
+              </p>
+            )}
+          </>
         ) : portfolio.length === 0 ? (
-          <p className="empty">
-            {!portfolioRefreshing
-              ? 'Add a purchase to see your portfolio.'
-              : slowStart
-                ? 'Starting the server… On free hosting this can take up to a minute after it has been idle.'
-                : 'Loading…'}
-          </p>
+          <p className="empty">Add a purchase to see your portfolio.</p>
         ) : (
           <>
             <PortfolioSummary
@@ -311,7 +336,7 @@ function App() {
               hoveredDay={hoveredDay}
             />
             {/* Holds the chart's space while its code downloads, so nothing jumps. */}
-            <Suspense fallback={<div className="chart-placeholder" aria-busy="true" />}>
+            <Suspense fallback={<div className="chart-placeholder skeleton" aria-busy="true" />}>
               <PortfolioChart
                 history={portfolio}
                 currency={loadedCurrency}
@@ -345,7 +370,7 @@ function App() {
       <section>
         <h2>Purchase history</h2>
         {loading ? (
-          <p className="empty">Loading…</p>
+          <RowsSkeleton />
         ) : error ? (
           <p className="form-error">{error}</p>
         ) : (
@@ -369,8 +394,49 @@ function App() {
         </Dialog>
       )}
 
+      <footer className="page-footer">
+        <span className="muted">Theme</span>
+        <Toggle
+          label="Theme"
+          options={[
+            { value: 'system', label: 'System' },
+            { value: 'light', label: 'Light' },
+            { value: 'dark', label: 'Dark' },
+          ]}
+          value={theme}
+          onChange={handleThemeChange}
+        />
+      </footer>
+
       <Toast toast={toast} onDismiss={() => setToast(null)} />
     </main>
+  )
+}
+
+// Gray shapes where the summary and chart will appear, while they load.
+function PortfolioSkeleton() {
+  return (
+    <div aria-busy="true">
+      <span className="visually-hidden">Loading…</span>
+      <div className="summary" aria-hidden="true">
+        <div className="skeleton skeleton-stat" />
+        <div className="skeleton skeleton-stat" />
+        <div className="skeleton skeleton-stat" />
+      </div>
+      <div className="skeleton skeleton-chart" aria-hidden="true" />
+    </div>
+  )
+}
+
+// Gray rows where a table will appear, while it loads.
+function RowsSkeleton() {
+  return (
+    <div aria-busy="true">
+      <span className="visually-hidden">Loading…</span>
+      {[1, 2, 3].map((row) => (
+        <div key={row} className="skeleton skeleton-row" aria-hidden="true" />
+      ))}
+    </div>
   )
 }
 

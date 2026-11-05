@@ -1,78 +1,56 @@
-/* All colors are defined here, once for light mode and once for dark mode.
-   The browser picks the set that matches the system's light/dark setting.
+/* All colors are defined here. Each one is light-dark(<light mode>, <dark mode>):
+   the browser uses the dark value when color-scheme is dark. That follows the
+   system setting, unless the user picked a theme (data-theme on <html>).
    Every text color was checked for WCAG contrast (at least 4.5:1). */
 :root {
   font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   line-height: 1.5;
-  color-scheme: light; /* native controls (inputs, date pickers, scrollbars) */
+  /* Also styles native controls (inputs, date pickers, scrollbars) to match. */
+  color-scheme: light dark;
 
-  --page: #f6f8fa;
-  --text: #1f2328;
-  --surface: #ffffff;
-  --border: #d0d7de;
-  --muted: #59636e;
-  --hover: #f3f4f6;
-  --shadow: rgba(0, 0, 0, 0.08);
-  --editing-row: #fff8c5;
+  --page: light-dark(#f6f8fa, #0d0d0d);
+  --text: light-dark(#1f2328, #f0efea);
+  --surface: light-dark(#ffffff, #1a1a19);
+  --border: light-dark(#d0d7de, #3d3d3a);
+  --muted: light-dark(#59636e, #a8a79f);
+  --hover: light-dark(#f3f4f6, #262624);
+  --shadow: light-dark(rgba(0, 0, 0, 0.08), rgba(0, 0, 0, 0.5));
+  --editing-row: light-dark(#fff8c5, #3b2f00);
+  --skeleton: light-dark(#eaeef2, #262624);
 
   --accent: #9a6700; /* button and toggle fills */
-  --accent-hover: #7d5300;
-  --accent-text: #9a6700; /* gold used as text, e.g. "Edit" links */
+  --accent-hover: light-dark(#7d5300, #845800);
+  /* Gold used as text, e.g. "Edit" links. Plain gold is too dark to read on dark. */
+  --accent-text: light-dark(#9a6700, #e3b341);
   --on-accent: #ffffff; /* text on accent fills */
-  --error: #cf222e;
+  --error: light-dark(#cf222e, #ff7b72);
 
-  /* Charts (validated palette: blue for the value, gray for context) */
-  --chart-value: #2a78d6;
+  /* Charts (validated palette: blue for the value, gray for context).
+     Dark values are the palette's dark-mode steps, validated on the dark surface. */
+  --chart-value: light-dark(#2a78d6, #3987e5);
   --chart-cost: #898781;
-  --chart-grid: #e1e0d9;
-  --chart-axis: #c3c2b7;
-  --chart-muted: #59636e; /* axis labels: same as --muted, 6.1:1 on white */
-  --gain-text: #006300;
-  --loss-text: #d03b3b;
+  --chart-grid: light-dark(#e1e0d9, #2c2c2a);
+  --chart-axis: light-dark(#c3c2b7, #383835);
+  --chart-muted: light-dark(#59636e, #a8a79f); /* axis labels, same as --muted */
+  --gain-text: light-dark(#006300, #3fb950);
+  --loss-text: light-dark(#d03b3b, #ff7b72);
 
   /* One color per metal. Checked with a palette validator for color-blind
-     separation: every pair passes, since any two can sit side by side in the
-     allocation bar. Metal names are always shown next to them too. */
-  --metal-gold: #eda100;
-  --metal-silver: #6250d6;
-  --metal-platinum: #e87ba4;
+     separation in both modes: every pair passes, since any two can sit side by
+     side in the allocation bar. Metal names are always shown next to them too. */
+  --metal-gold: light-dark(#eda100, #c98500);
+  --metal-silver: light-dark(#6250d6, #9085e9);
+  --metal-platinum: light-dark(#e87ba4, #d55181);
   --metal-palladium: #008300;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    color-scheme: dark;
+/* A theme the user picked overrides the system setting. */
+:root[data-theme='light'] {
+  color-scheme: light;
+}
 
-    --page: #0d0d0d;
-    --text: #f0efea;
-    --surface: #1a1a19;
-    --border: #3d3d3a;
-    --muted: #a8a79f;
-    --hover: #262624;
-    --shadow: rgba(0, 0, 0, 0.5);
-    --editing-row: #3b2f00;
-
-    --accent: #9a6700;
-    --accent-hover: #845800;
-    --accent-text: #e3b341; /* plain gold is too dark to read on a dark surface */
-    --on-accent: #ffffff;
-    --error: #ff7b72;
-
-    /* The chart palette's dark-mode steps, validated against the dark surface. */
-    --chart-value: #3987e5;
-    --chart-cost: #898781;
-    --chart-grid: #2c2c2a;
-    --chart-axis: #383835;
-    --chart-muted: #a8a79f;
-    --gain-text: #3fb950;
-    --loss-text: #ff7b72;
-
-    /* The same four hues, stepped for the dark surface and validated there. */
-    --metal-gold: #c98500;
-    --metal-silver: #9085e9;
-    --metal-platinum: #d55181;
-    --metal-palladium: #008300;
-  }
+:root[data-theme='dark'] {
+  color-scheme: dark;
 }
 
 body {
@@ -658,4 +636,70 @@ td.actions {
 
 .toast button:focus-visible {
   outline: 2px solid currentColor;
+}
+
+/* --- Loading placeholders --- */
+
+/* Gray shapes where content will appear, gently pulsing while it loads. */
+.skeleton {
+  background: var(--skeleton);
+  border-radius: 6px;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+  50% {
+    opacity: 0.5;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton {
+    animation: none;
+  }
+}
+
+.skeleton-stat {
+  height: 4.5rem;
+}
+
+.skeleton-chart {
+  height: 320px;
+}
+
+.skeleton-row {
+  height: 2.25rem;
+  margin-bottom: 0.5rem;
+}
+
+/* --- Footer: theme choice --- */
+
+.page-footer {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.875rem;
+}
+
+/* --- Phones --- */
+
+@media (max-width: 480px) {
+  /* The big value on its own line; cost and gain side by side below it. */
+  .summary {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .summary > :first-child {
+    grid-column: 1 / -1;
+  }
+
+  /* Tables scroll sideways; keep the first column (date or metal) in view. */
+  .table-wrapper th:first-child,
+  .table-wrapper td:first-child {
+    position: sticky;
+    left: 0;
+    z-index: 1;
+    background: var(--surface);
+  }
 }
