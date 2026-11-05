@@ -8,12 +8,14 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
-import type { TooltipContentProps } from 'recharts'
-import type { Currency, PortfolioDay } from '../api'
+import type { DotItemDotProps, TooltipContentProps } from 'recharts'
+import type { Currency, PortfolioDay, Purchase } from '../api'
 import { CHART_RANGES, availableRanges, rangeStart } from '../chartRange'
 import type { ChartRange } from '../chartRange'
 import Toggle from './Toggle'
 import {
+  METAL_LABELS,
+  UNIT_LABELS,
   formatAxisMoney,
   formatDate,
   formatMoney,
@@ -32,6 +34,8 @@ type Props = {
   onRangeChange: (range: ChartRange) => void
   // Called with the day under the pointer, and with null when it leaves the chart.
   onHoverDay: (day: PortfolioDay | null) => void
+  // Purchases of the metal(s) shown, marked on the cost line on the day they were made.
+  purchases: Purchase[]
 }
 
 // One point on the chart. Numbers are only for drawing; the exact strings
@@ -41,6 +45,8 @@ type ChartRow = {
   value: number | null
   cost: number | null
   day: PortfolioDay
+  // What was bought that day (usually nothing).
+  bought: Purchase[]
 }
 
 export default function PortfolioChart({
@@ -50,6 +56,7 @@ export default function PortfolioChart({
   range,
   onRangeChange,
   onHoverDay,
+  purchases,
 }: Props) {
   const [showTable, setShowTable] = useState(false)
 
@@ -60,11 +67,13 @@ export default function PortfolioChart({
   const start = history.length > 0 ? rangeStart(shownRange, history[history.length - 1].date) : null
   const shown = start === null ? history : history.filter((day) => day.date >= start)
 
+  const boughtOn = purchasesByDate(purchases)
   const rows: ChartRow[] = shown.map((day) => ({
     date: day.date,
     value: day.value === null ? null : Number(day.value),
     cost: day.cost === null ? null : Number(day.cost),
     day,
+    bought: boughtOn.get(day.date) ?? [],
   }))
   const ticks = roundTicks(rows.flatMap((row) => [row.value, row.cost]))
 
@@ -93,7 +102,7 @@ export default function PortfolioChart({
       </div>
 
       {showTable ? (
-        <HistoryTable history={shown} currency={currency} />
+        <HistoryTable rows={rows} currency={currency} />
       ) : (
         <>
           <ul className="legend">
@@ -102,6 +111,9 @@ export default function PortfolioChart({
             </li>
             <li>
               <span className="legend-key cost" aria-hidden="true" /> Cost
+            </li>
+            <li>
+              <span className="legend-key purchase" aria-hidden="true" /> Purchase
             </li>
           </ul>
           <div className="chart-area">
@@ -164,6 +176,16 @@ export default function PortfolioChart({
                   connectNulls={false}
                   isAnimationActive={false}
                 />
+                {/* Purchase markers: an invisible copy of the cost line that only draws
+                    dots on purchase days. Drawn last so the value line can't cover them. */}
+                <Line
+                  dataKey="cost"
+                  stroke="none"
+                  dot={PurchaseMarker}
+                  activeDot={false}
+                  legendType="none"
+                  isAnimationActive={false}
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -202,24 +224,67 @@ function roundTicks(amounts: (number | null)[]): number[] {
   return ticks
 }
 
-// Just the date: the headline figures above show that day's numbers.
+// Groups purchases by the day they were made ("YYYY-MM-DD").
+function purchasesByDate(purchases: Purchase[]): Map<string, Purchase[]> {
+  const byDate = new Map<string, Purchase[]>()
+  for (const purchase of purchases) {
+    byDate.set(purchase.purchase_date, [...(byDate.get(purchase.purchase_date) ?? []), purchase])
+  }
+  return byDate
+}
+
+// e.g. "1 troy oz Gold for $2,420.00", in what the user entered and paid.
+function describePurchase(purchase: Purchase): string {
+  return (
+    `${purchase.original_weight} ${UNIT_LABELS[purchase.original_unit]} ` +
+    `${METAL_LABELS[purchase.metal]} for ${formatMoney(purchase.price_paid, purchase.currency)}`
+  )
+}
+
+// A dot on the cost line on days with a purchase, so a jump in value from
+// buying more isn't mistaken for the market going up.
+function PurchaseMarker({ cx, cy, payload, index }: DotItemDotProps) {
+  const row = payload as ChartRow
+  if (row.bought.length === 0 || cx == null || cy == null) {
+    return null
+  }
+  return (
+    <circle
+      key={index}
+      cx={cx}
+      cy={cy}
+      r={5}
+      fill="var(--chart-cost)"
+      stroke="var(--surface)"
+      strokeWidth={2}
+    />
+  )
+}
+
+// The date, plus anything bought that day. The headline figures above show the numbers.
 function ChartTooltip({ active, payload }: TooltipContentProps) {
   if (!active || !payload || payload.length === 0) {
     return null
   }
-  const day = (payload[0].payload as ChartRow).day
+  const row = payload[0].payload as ChartRow
 
   return (
     <div className="chart-tooltip">
-      <p className="tooltip-date">{formatDate(day.date)}</p>
+      <p className="tooltip-date">{formatDate(row.date)}</p>
+      {row.bought.map((purchase) => (
+        <p key={purchase.id} className="tooltip-row">
+          <span className="legend-key purchase" aria-hidden="true" />
+          Bought {describePurchase(purchase)}
+        </p>
+      ))}
       {/* The headline keeps showing the latest figures on these days. */}
-      {day.value === null && <p className="tooltip-row">Value unknown (no price that day)</p>}
+      {row.value === null && <p className="tooltip-row">Value unknown (no price that day)</p>}
     </div>
   )
 }
 
 // The same data as the chart, readable without hovering. Newest first.
-function HistoryTable({ history, currency }: { history: PortfolioDay[]; currency: Currency }) {
+function HistoryTable({ rows, currency }: { rows: ChartRow[]; currency: Currency }) {
   const show = (amount: string | null) => (amount === null ? '—' : formatMoney(amount, currency))
 
   return (
@@ -232,10 +297,11 @@ function HistoryTable({ history, currency }: { history: PortfolioDay[]; currency
             <th className="number">Cost</th>
             <th className="number">Gain / loss</th>
             <th className="number">%</th>
+            <th>Purchases</th>
           </tr>
         </thead>
         <tbody>
-          {[...history].reverse().map((day) => (
+          {[...rows].reverse().map(({ day, bought }) => (
             <tr key={day.date}>
               <td>{formatDate(day.date)}</td>
               <td className="number">{show(day.value)}</td>
@@ -246,6 +312,7 @@ function HistoryTable({ history, currency }: { history: PortfolioDay[]; currency
               <td className="number">
                 {day.gain_percent === null ? '—' : formatSignedPercent(day.gain_percent)}
               </td>
+              <td>{bought.map(describePurchase).join('; ')}</td>
             </tr>
           ))}
         </tbody>

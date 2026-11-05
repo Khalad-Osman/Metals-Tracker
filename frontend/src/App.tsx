@@ -279,6 +279,12 @@ function App() {
                 range={chartRange}
                 onRangeChange={handleChartRangeChange}
                 onHoverDay={setHoveredDay}
+                // Matches the loaded chart data, so markers never show another metal.
+                purchases={
+                  loadedMetal === 'all'
+                    ? purchases
+                    : purchases.filter((purchase) => purchase.metal === loadedMetal)
+                }
               />
             </Suspense>
             <p className="chart-note">

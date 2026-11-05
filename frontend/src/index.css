@@ -391,6 +391,14 @@ td.actions {
   background: var(--chart-cost);
 }
 
+/* A round dot, matching the purchase markers on the cost line. */
+.legend-key.purchase {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--chart-cost);
+}
+
 .chart-area {
   width: 100%;
 }
