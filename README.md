@@ -28,12 +28,16 @@ while, the first load can take up to a minute while the server starts.
 - **Log purchases** in grams, troy ounces or kilograms, paid in CAD or USD. Weights are
   converted to troy ounces for calculations, and the original entry is kept for display.
 - **Portfolio value over time**: a daily chart of market value against cost, with
-  summary figures for value, cost and gain.
+  summary figures for value, cost and gain. Pick a time range (1M to All); hovering
+  shows any day's figures, and dots mark each purchase so new money isn't mistaken
+  for growth.
 - **Filter by metal** to see one metal's performance on its own.
-- **Holdings by metal**: weight, value, cost, gain and share of the portfolio.
+- **Holdings by metal**: weight, value, cost, gain and share of the portfolio, with an
+  allocation bar. Each metal has its own color, checked for color-blind separation.
 - **CAD / USD toggle**: every figure is recalculated on the server in either currency.
+- **Undo** after deleting a purchase.
 - **Automatic daily data** from two APIs, updated by one command or a weekly scheduled task.
-- **Dark mode** that follows the system setting.
+- **Light and dark themes**: follows the system setting, or pick one.
 
 ## Tech stack
 
