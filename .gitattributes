@@ -1,0 +1,5 @@
+# Use LF line endings for text files on every machine, whatever its Git settings.
+* text=auto eol=lf
+
+# Images are binary; never touch their line endings.
+*.png binary
