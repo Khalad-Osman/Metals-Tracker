@@ -1,14 +1,26 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
-import { ApiError, deletePurchase, getDemoMode, getHoldings, getPortfolioHistory, listPurchases } from './api'
+import {
+  ApiError,
+  createPurchase,
+  deletePurchase,
+  getDemoMode,
+  getHoldings,
+  getPortfolioHistory,
+  listPurchases,
+  purchaseInput,
+} from './api'
 import type { Currency, DemoMode, Holding, Metal, PortfolioDay, Purchase } from './api'
 import { CHART_RANGES } from './chartRange'
 import type { ChartRange } from './chartRange'
 import { METAL_LABELS, UNIT_LABELS, formatDate } from './format'
+import Dialog from './components/Dialog'
 import HoldingsTable from './components/HoldingsTable'
 import MetalName from './components/MetalName'
 import PortfolioSummary from './components/PortfolioSummary'
 import PurchaseForm from './components/PurchaseForm'
 import PurchaseTable from './components/PurchaseTable'
+import Toast from './components/Toast'
+import type { ToastMessage } from './components/Toast'
 import Toggle from './components/Toggle'
 
 // The chart library (Recharts) is most of the app's code, so it's downloaded
@@ -58,8 +70,11 @@ function App() {
   const [purchases, setPurchases] = useState<Purchase[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  // The purchase being edited in the form, if any.
-  const [editing, setEditing] = useState<Purchase | undefined>()
+  // The purchase dialog: closed, adding a new purchase, or editing this one.
+  const [dialogFor, setDialogFor] = useState<Purchase | 'new' | null>(null)
+  const editing = dialogFor !== null && dialogFor !== 'new' ? dialogFor : undefined
+  // The message at the bottom of the screen, e.g. "Purchase deleted · Undo".
+  const [toast, setToast] = useState<ToastMessage | null>(null)
   // Whether this is a public demo, and if so whether purchases can be changed.
   const [demoMode, setDemoMode] = useState<DemoMode>('off')
   const readOnly = demoMode === 'readonly'
@@ -89,6 +104,13 @@ function App() {
     const timer = setTimeout(() => setSlowStart(true), 4000)
     return () => clearTimeout(timer)
   }, [])
+
+  // Each message disappears after 10 seconds (a new message restarts the clock).
+  useEffect(() => {
+    if (!toast) return
+    const timer = setTimeout(() => setToast(null), 10000)
+    return () => clearTimeout(timer)
+  }, [toast])
 
   // Ask the backend once whether this is a public demo.
   useEffect(() => {
@@ -169,35 +191,42 @@ function App() {
     saveSetting(CHART_RANGE_STORAGE_KEY, newRange)
   }
 
+  function showToast(text: string, action?: ToastMessage['action']) {
+    setToast({ id: Date.now(), text, action })
+  }
+
   function handleSaved() {
-    setEditing(undefined)
+    showToast(editing ? 'Changes saved.' : 'Purchase added.')
+    setDialogFor(null)
     reload()
   }
 
-  function handleEdit(purchase: Purchase) {
-    setEditing(purchase)
-    document.getElementById('purchase-form')?.scrollIntoView({ behavior: 'smooth' })
-  }
-
+  // Deletes straight away, with an Undo that adds the same purchase back.
   async function handleDelete(purchase: Purchase) {
-    const description =
-      `${purchase.original_weight} ${UNIT_LABELS[purchase.original_unit]} of ` +
-      `${METAL_LABELS[purchase.metal]} bought ${formatDate(purchase.purchase_date)}`
-    if (!window.confirm(`Delete ${description}? This can't be undone.`)) {
-      return
-    }
-
     try {
       await deletePurchase(purchase.id)
-      if (editing?.id === purchase.id) {
-        setEditing(undefined)
-      }
       reload()
+      showToast(`Deleted ${describe(purchase)}.`, {
+        label: 'Undo',
+        onClick: () => handleUndoDelete(purchase),
+      })
     } catch (err) {
-      setError(
-        err instanceof ApiError
-          ? err.message
-          : 'Could not delete the purchase. Is the backend running?',
+      showToast(
+        err instanceof ApiError ? err.message : 'Could not delete the purchase. Is the backend running?',
+      )
+    }
+  }
+
+  async function handleUndoDelete(purchase: Purchase) {
+    setToast(null)
+    try {
+      // Same details as before; only its internal id is new.
+      await createPurchase(purchaseInput(purchase))
+      reload()
+      showToast(`Restored ${describe(purchase)}.`)
+    } catch (err) {
+      showToast(
+        err instanceof ApiError ? err.message : 'Could not restore the purchase. Is the backend running?',
       )
     }
   }
@@ -223,15 +252,22 @@ function App() {
           </h1>
           <p className="tagline">Precious metals portfolio tracker</p>
         </div>
-        <Toggle
-          label="Display currency"
-          options={[
-            { value: 'CAD', label: 'CAD' },
-            { value: 'USD', label: 'USD' },
-          ]}
-          value={currency}
-          onChange={handleCurrencyChange}
-        />
+        <div className="header-actions">
+          <Toggle
+            label="Display currency"
+            options={[
+              { value: 'CAD', label: 'CAD' },
+              { value: 'USD', label: 'USD' },
+            ]}
+            value={currency}
+            onChange={handleCurrencyChange}
+          />
+          {!readOnly && (
+            <button type="button" className="primary" onClick={() => setDialogFor('new')}>
+              Add purchase
+            </button>
+          )}
+        </div>
       </header>
 
       {demoMode !== 'off' && (
@@ -306,16 +342,6 @@ function App() {
         </section>
       )}
 
-      {!readOnly && (
-        <PurchaseForm
-          // A new key resets the form whenever we switch between adding and editing.
-          key={editing?.id ?? 'new'}
-          editing={editing}
-          onSaved={handleSaved}
-          onCancelEdit={() => setEditing(undefined)}
-        />
-      )}
-
       <section>
         <h2>Purchase history</h2>
         {loading ? (
@@ -327,12 +353,32 @@ function App() {
             purchases={purchases}
             editingId={editing?.id}
             // Without these the table is read-only, as in the demo.
-            onEdit={readOnly ? undefined : handleEdit}
+            onEdit={readOnly ? undefined : setDialogFor}
             onDelete={readOnly ? undefined : handleDelete}
           />
         )}
       </section>
+
+      {dialogFor !== null && (
+        <Dialog labelledBy="purchase-form-title" onClose={() => setDialogFor(null)}>
+          <PurchaseForm
+            editing={editing}
+            onSaved={handleSaved}
+            onCancel={() => setDialogFor(null)}
+          />
+        </Dialog>
+      )}
+
+      <Toast toast={toast} onDismiss={() => setToast(null)} />
     </main>
+  )
+}
+
+// e.g. "1 troy oz of Gold bought Oct 1, 2026"
+function describe(purchase: Purchase): string {
+  return (
+    `${purchase.original_weight} ${UNIT_LABELS[purchase.original_unit]} of ` +
+    `${METAL_LABELS[purchase.metal]} bought ${formatDate(purchase.purchase_date)}`
   )
 }
 

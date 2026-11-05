@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { ApiError, createPurchase, updatePurchase, ValidationError } from '../api'
+import { ApiError, createPurchase, purchaseInput, updatePurchase, ValidationError } from '../api'
 import type { Currency, FieldErrors, Metal, Purchase, PurchaseInput, WeightUnit } from '../api'
 import { METAL_LABELS, UNIT_LABELS, todayIso } from '../format'
 
@@ -8,7 +8,7 @@ type Props = {
   // When set, the form edits this purchase instead of adding a new one.
   editing?: Purchase
   onSaved: () => void
-  onCancelEdit: () => void
+  onCancel: () => void
 }
 
 function emptyForm(): PurchaseInput {
@@ -22,21 +22,11 @@ function emptyForm(): PurchaseInput {
   }
 }
 
-// Fill the form with what the user originally entered for this purchase.
-function formFromPurchase(purchase: Purchase): PurchaseInput {
-  return {
-    metal: purchase.metal,
-    weight: purchase.original_weight,
-    unit: purchase.original_unit,
-    purchase_date: purchase.purchase_date,
-    price_paid: purchase.price_paid,
-    currency: purchase.currency,
-  }
-}
-
-export default function PurchaseForm({ editing, onSaved, onCancelEdit }: Props) {
+// Shown in a dialog, which closes once the purchase is saved.
+export default function PurchaseForm({ editing, onSaved, onCancel }: Props) {
+  // Editing starts from what the user originally entered.
   const [form, setForm] = useState<PurchaseInput>(() =>
-    editing ? formFromPurchase(editing) : emptyForm(),
+    editing ? purchaseInput(editing) : emptyForm(),
   )
   const [fieldErrors, setFieldErrors] = useState<FieldErrors>({})
   const [error, setError] = useState<string | null>(null)
@@ -57,8 +47,6 @@ export default function PurchaseForm({ editing, onSaved, onCancelEdit }: Props) 
         await updatePurchase(editing.id, form)
       } else {
         await createPurchase(form)
-        // Keep the metal, unit and currency choices; clear the rest for the next entry.
-        setForm({ ...emptyForm(), metal: form.metal, unit: form.unit, currency: form.currency })
       }
       onSaved()
     } catch (err) {
@@ -75,13 +63,8 @@ export default function PurchaseForm({ editing, onSaved, onCancelEdit }: Props) 
   }
 
   return (
-    <form
-      id="purchase-form"
-      className={editing ? 'purchase-form editing' : 'purchase-form'}
-      onSubmit={handleSubmit}
-      noValidate
-    >
-      <h2>{editing ? 'Edit purchase' : 'Add a purchase'}</h2>
+    <form className="purchase-form" onSubmit={handleSubmit} noValidate>
+      <h2 id="purchase-form-title">{editing ? 'Edit purchase' : 'Add a purchase'}</h2>
 
       <div className="field">
         <label htmlFor="metal">Metal</label>
@@ -170,11 +153,9 @@ export default function PurchaseForm({ editing, onSaved, onCancelEdit }: Props) 
         <button type="submit" className="primary" disabled={saving}>
           {saving ? 'Saving…' : editing ? 'Save changes' : 'Add purchase'}
         </button>
-        {editing && (
-          <button type="button" className="secondary" onClick={onCancelEdit} disabled={saving}>
-            Cancel
-          </button>
-        )}
+        <button type="button" className="secondary" onClick={onCancel} disabled={saving}>
+          Cancel
+        </button>
       </div>
     </form>
   )

@@ -96,8 +96,7 @@ h2 {
   margin: 0 0 1rem;
 }
 
-section,
-.purchase-form {
+section {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 8px;
@@ -150,11 +149,6 @@ button {
 
 .input-group input {
   flex: 1;
-}
-
-.purchase-form.editing {
-  border-color: var(--accent);
-  box-shadow: 0 0 0 1px var(--accent);
 }
 
 .form-actions {
@@ -549,6 +543,7 @@ td.actions {
 
 .page-header {
   display: flex;
+  flex-wrap: wrap;
   justify-content: space-between;
   align-items: center;
   gap: 1rem;
@@ -594,4 +589,73 @@ td.actions {
 
 .demo-banner a {
   color: var(--accent-text);
+}
+
+/* Currency toggle and the "Add purchase" button, top right. */
+.header-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+/* --- Dialog (add / edit purchase) --- */
+
+.dialog {
+  width: min(560px, calc(100vw - 2rem));
+  padding: 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: 0 8px 32px var(--shadow);
+}
+
+.dialog::backdrop {
+  background: rgba(0, 0, 0, 0.45);
+}
+
+/* --- Toast: a short message at the bottom of the screen --- */
+
+.toast-region {
+  position: fixed;
+  left: 50%;
+  bottom: 1.5rem;
+  transform: translateX(-50%);
+  width: max-content;
+  max-width: calc(100vw - 2rem);
+  z-index: 10;
+}
+
+/* Inverted colors (dark on light pages, light on dark) so it stands out. */
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.6rem 0.6rem 0.6rem 1rem;
+  border-radius: 8px;
+  background: var(--text);
+  color: var(--page);
+  box-shadow: 0 4px 16px var(--shadow);
+  font-size: 0.9rem;
+}
+
+.toast button {
+  border: none;
+  background: none;
+  color: inherit;
+  padding: 0.2rem 0.5rem;
+}
+
+.toast-action {
+  text-decoration: underline;
+}
+
+.toast-close {
+  font-size: 1.1rem;
+  line-height: 1;
+}
+
+.toast button:focus-visible {
+  outline: 2px solid currentColor;
 }

@@ -14,7 +14,7 @@ export default function PurchaseTable({ purchases, editingId, onEdit, onDelete }
   const editable = onEdit !== undefined && onDelete !== undefined
 
   if (purchases.length === 0) {
-    return <p className="empty">No purchases yet. Add your first one above.</p>
+    return <p className="empty">No purchases yet. Use “Add purchase” to log your first one.</p>
   }
 
   return (

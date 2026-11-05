@@ -29,6 +29,18 @@ export type PurchaseInput = {
   currency: Currency
 }
 
+// What the user originally entered for a purchase, e.g. to edit it or add it again.
+export function purchaseInput(purchase: Purchase): PurchaseInput {
+  return {
+    metal: purchase.metal,
+    weight: purchase.original_weight,
+    unit: purchase.original_unit,
+    purchase_date: purchase.purchase_date,
+    price_paid: purchase.price_paid,
+    currency: purchase.currency,
+  }
+}
+
 // Field name -> message, e.g. { weight: "Input should be greater than 0" }
 export type FieldErrors = Partial<Record<keyof PurchaseInput, string>>
 
